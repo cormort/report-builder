@@ -3,647 +3,401 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Report Studio v4.5 - PDF 智慧偵測穩定版</title>
-    <!-- 引入 PDF.js 庫 (必須在 Head) -->
+    <title>Pro Report Studio v5.0 - 表格精靈版</title>
+    <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    </script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <style>
-        :root {
-            --primary: #2186c4; --primary-hover: #1a6a9e;
-            --bg: #f0f2f5; --surface: #ffffff;
-            --text: #333; --border: #dcdfe6;
-            --success: #67c23a; --danger: #f56c6c;
-        }
+        :root { --primary: #2186c4; --bg: #f0f2f5; --surface: #ffffff; --border: #dcdfe6; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); height: 100vh; display: flex; flex-direction: column; color: #333; }
         
         /* Layout */
         .header { background: #2b3a42; color: white; padding: 0 20px; height: 60px; display: flex; justify-content: space-between; align-items: center; }
         .main-layout { display: flex; flex: 1; overflow: hidden; }
         .panel { background: var(--surface); display: flex; flex-direction: column; border-right: 1px solid var(--border); }
-        .left-panel { width: 280px; padding: 15px; overflow-y: auto; }
-        .center-panel { flex: 1; background: #525659; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow: auto; }
-        .right-panel { width: 320px; padding: 15px; overflow-y: auto; border-left: 1px solid var(--border); }
-        .panel-title { font-size: 14px; font-weight: 700; color: #606266; margin-bottom: 12px; text-transform: uppercase; border-bottom: 2px solid #eee; padding-bottom: 5px;}
-        
-        /* Upload & Buttons */
-        .upload-area { border: 2px dashed var(--border); padding: 15px; text-align: center; cursor: pointer; color: #909399; font-size: 13px; margin-bottom: 10px; transition:0.2s; }
-        .upload-area:hover { border-color: var(--primary); background: #ecf5ff; }
-        .field-item { padding: 6px 10px; background: #f4f4f5; border: 1px solid #e9e9eb; margin-bottom: 5px; cursor: grab; font-size: 12px; }
-        
-        .tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
-        .btn-tpl { padding: 8px; border: 1px solid var(--border); background: white; cursor: pointer; font-size: 12px; text-align: center; border-radius: 4px; transition: 0.2s; }
-        .btn-tpl:hover { border-color: var(--primary); color: var(--primary); background: #f0f9eb; font-weight: bold; }
+        .left-panel { width: 260px; padding: 15px; overflow-y: auto; }
+        .center-panel { flex: 1; background: #525659; position: relative; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow: auto; }
+        .right-panel { width: 300px; padding: 15px; overflow-y: auto; border-left: 1px solid var(--border); }
+        .panel-title { font-size: 14px; font-weight: bold; color: #666; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
 
-        /* Canvas */
-        .canvas-wrapper { box-shadow: 0 0 20px rgba(0,0,0,0.5); transition: 0.3s; margin: auto; }
-        .canvas {
-            background: white; position: relative; overflow: hidden;
-            background-size: contain; background-repeat: no-repeat; background-position: center;
-            background-image: linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px);
-            background-size: 20px 20px; 
-            transform-origin: top center;
-        }
-        .canvas-element {
-            position: absolute; cursor: move; display: flex; align-items: center; overflow: hidden;
-            border: 1px dashed #ccc; box-sizing: border-box;
-        }
-        .canvas-element.selected { border: 2px solid var(--primary); z-index: 100; background: rgba(33, 150, 243, 0.1); }
-        .canvas-element-value { pointer-events: none; width: 100%; padding: 2px; }
-        .resize-handle { position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background: var(--primary); cursor: nwse-resize; display: none; }
-        .canvas-element.selected .resize-handle { display: block; }
-        
-        #splitLine { position: absolute; left: 0; width: 100%; height: 0; border-top: 2px dashed #f56c6c; z-index: 90; cursor: ns-resize; display: none; }
-
-        /* Controls */
+        /* UI Elements */
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; background: #e0e0e0; display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: 0.2s; }
+        .btn:hover { background: #d0d0d0; }
+        .btn-primary { background: var(--primary); color: white; } .btn-primary:hover { background: #1a6a9e; }
+        .btn-danger { background: #f56c6c; color: white; }
+        .btn-success { background: #67c23a; color: white; }
+        .btn-block { width: 100%; margin-bottom: 5px; }
         .form-group { margin-bottom: 10px; }
         .form-label { font-size: 12px; color: #666; display: block; margin-bottom: 3px; }
         .form-control { width: 100%; padding: 5px; border: 1px solid var(--border); font-size: 13px; }
-        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; color: white; background: #666; display: inline-flex; align-items: center; gap: 5px; justify-content: center; }
-        .btn-primary { background: var(--primary); } .btn-success { background: var(--success); } .btn-danger { background: var(--danger); }
-        .btn-block { width: 100%; }
+        
+        /* Upload & List */
+        .upload-area { border: 2px dashed var(--border); padding: 15px; text-align: center; cursor: pointer; font-size: 13px; margin-bottom: 10px; color: #666; }
+        .upload-area:hover { border-color: var(--primary); background: #ecf5ff; }
+        .field-item { padding: 5px 8px; background: #f4f4f5; border: 1px solid #e9e9eb; margin-bottom: 4px; cursor: grab; font-size: 12px; }
+        
+        /* Canvas */
+        .canvas-wrapper { box-shadow: 0 0 20px rgba(0,0,0,0.5); margin: auto; transition: 0.3s; }
+        .canvas {
+            background: white; position: relative; overflow: hidden; transform-origin: top center;
+            background-image: linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .canvas-element { position: absolute; cursor: move; display: flex; align-items: center; overflow: hidden; border: 1px dashed #ccc; box-sizing: border-box; }
+        .canvas-element.selected { border: 2px solid var(--primary); z-index: 100; background: rgba(33, 150, 243, 0.1); }
+        .canvas-element-value { pointer-events: none; width: 100%; padding: 2px; overflow: hidden; }
+        .resize-handle { position: absolute; bottom: 0; right: 0; width: 8px; height: 8px; background: var(--primary); cursor: nwse-resize; display: none; }
+        .canvas-element.selected .resize-handle { display: block; }
+        #splitLine { position: absolute; left: 0; width: 100%; height: 0; border-top: 2px dashed #f56c6c; z-index: 90; cursor: ns-resize; display: none; }
 
+        /* Table Wizard Modal */
+        .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; }
+        .modal { background: white; padding: 20px; border-radius: 8px; width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+
+        /* Print */
         #print-container { display: none; }
         @media print {
             @page { margin: 0; }
             body * { visibility: hidden; }
-            #print-container { display: block !important; position: absolute; left: 0; top: 0; width: 100%; visibility: visible; z-index: 9999; }
+            #print-container { display: block !important; position: absolute; left: 0; top: 0; width: 100%; visibility: visible; }
             #print-container * { visibility: visible; }
             .print-page { position: relative; margin: 0 auto; background: white; page-break-after: always; break-after: page; overflow: hidden; }
             .print-element { position: absolute; display: flex; align-items: center; padding: 2px; }
-            /* 列印時移除背景網格圖 */
             .print-page { background-image: none !important; }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <div style="font-weight: bold;">📊 Pro Report Studio v4.5 (PDF Fixed)</div>
-        <div><button class="btn btn-success" id="printBtn">🖨️ 列印 / 匯出 PDF</button></div>
+        <div style="font-weight: bold;">📊 Pro Report Studio v5.0 (Table Wizard)</div>
+        <div><button class="btn btn-success" id="printBtn">🖨️ 列印 / 匯出</button></div>
     </div>
 
     <div class="main-layout">
-        <!-- LEFT PANEL -->
+        <!-- LEFT: Tools -->
         <div class="panel left-panel">
-            <div class="panel-title">1. 匯入與底圖</div>
-            <div class="upload-area" id="dataUploadBtn">📂 上傳 CSV 數據<input type="file" id="dataFile" hidden accept=".csv,.json"></div>
+            <div class="panel-title">1. 檔案</div>
+            <div class="upload-area" id="dataBtn">📂 上傳 CSV 數據<input type="file" id="dataFile" hidden accept=".csv,.json"></div>
             <div id="fileInfo" style="font-size:12px; color:#67c23a; margin-bottom:10px;"></div>
+            <div class="upload-area" id="pdfBtn" style="color:#2186c4; border-color:#2186c4">📄 匯入 PDF 底圖<input type="file" id="pdfFile" hidden accept=".pdf"></div>
             
-            <div class="upload-area" id="pdfUploadBtn" style="border-color:#2186c4; color:#2186c4;">
-                📄 匯入 PDF 底圖與偵測
-                <input type="file" id="pdfFile" hidden accept=".pdf">
+            <div class="panel-title">2. 插入物件</div>
+            <button class="btn btn-block" onclick="openTableModal()">📅 插入表格 (精靈)</button>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-bottom:10px;">
+                <button class="btn" onclick="addElement('text','文字',20,20)">A 文字</button>
+                <button class="btn" onclick="addElement('title','標題',20,20,150,40,20,'bold')">H 標題</button>
+            </div>
+            
+            <div class="panel-title">3. 基本形狀</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px; margin-bottom:10px;">
+                <button class="btn" onclick="addElement('text','',50,50,100,50,12,'normal','transparent','2px solid #333')" title="矩形框">⬜</button>
+                <button class="btn" onclick="addElement('text','',50,50,200,2,12,'normal','#000','none')" title="水平線">━</button>
+                <button class="btn" onclick="addElement('text','',50,50,2,100,12,'normal','#000','none')" title="垂直線">┃</button>
             </div>
 
-            <div class="panel-title">2. 快速模版</div>
-            <div class="tpl-grid">
-                <div class="btn-tpl" onclick="tpl('labels')">🏷️ 標籤貼紙</div>
-                <div class="btn-tpl" onclick="tpl('tw_b2b')">🇹🇼 三聯式發票</div>
-                <div class="btn-tpl" onclick="tpl('tw_einvoice')">🧾 電子發票</div>
-                <div class="btn-tpl" onclick="tpl('table')">📑 通用報表</div>
-            </div>
-
-            <div class="panel-title">3. 可用欄位</div>
-            <div id="fieldList" style="min-height: 100px;"></div>
+            <div class="panel-title">4. 可用欄位</div>
+            <div id="fieldList" style="min-height:100px;"></div>
         </div>
 
-        <!-- CENTER CANVAS -->
+        <!-- CENTER: Canvas -->
         <div class="panel center-panel">
-            <div style="margin-bottom:10px; display:flex; gap:10px;">
-                <button class="btn" style="background:white; color:#333" id="addTextBtn">➕ 文字</button>
-                <button class="btn" style="background:white; color:#333" id="addTitleBtn">📌 標題</button>
-                <button class="btn" style="background:white; color:#333" id="addBoxBtn">⬜ 空框</button>
-                <button class="btn btn-danger" id="clearBgBtn" style="display:none">🗑️ 清除背景</button>
+            <div style="margin-bottom:10px;">
+                <button class="btn btn-danger" id="clearBgBtn" style="display:none">🗑️ 清除背景圖</button>
             </div>
             <div class="canvas-wrapper">
                 <div class="canvas" id="canvas" style="width:210mm; height:297mm;">
                     <div id="splitLine" style="top: 150px;"></div>
                 </div>
             </div>
+            
+            <!-- Table Wizard Modal -->
+            <div class="modal-overlay" id="tableModal">
+                <div class="modal">
+                    <h3 style="margin-bottom:15px">插入表格精靈</h3>
+                    <div class="form-group">
+                        <label class="form-label">欄位數 (Columns)</label>
+                        <input type="number" id="tblCols" class="form-control" value="3" min="1" max="10">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">資料列數 (Rows)</label>
+                        <input type="number" id="tblRows" class="form-control" value="2" min="1" max="20">
+                    </div>
+                    <div class="form-group" style="font-size:12px; color:#666">
+                        <input type="checkbox" id="autoFill" checked> 自動填入 CSV 欄位名稱與變數
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:20px;">
+                        <button class="btn btn-block" onclick="closeTableModal()">取消</button>
+                        <button class="btn btn-primary btn-block" onclick="insertTable()">插入表格</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- RIGHT SETTINGS -->
+        <!-- RIGHT: Settings -->
         <div class="panel right-panel">
-            <div class="panel-title">📄 版面設定</div>
-            <div class="form-group">
-                <label class="form-label">紙張大小</label>
-                <select class="form-control" id="pageSizeSelect">
-                    <option value="a4">A4 (210 x 297 mm)</option>
-                    <option value="a5">A5 (148 x 210 mm)</option>
-                    <option value="letter">Letter</option>
-                    <option value="receipt80">80mm 收據</option>
-                    <option value="custom">自訂 / PDF 原尺寸</option>
-                </select>
+            <div class="panel-title">版面設定</div>
+            <div class="form-group"><label class="form-label">紙張</label><select id="pageSize" class="form-control"><option value="a4">A4</option><option value="a5">A5</option><option value="receipt80">80mm 收據</option><option value="custom">自訂/PDF</option></select></div>
+            <div class="form-group"><label class="form-label">方向</label><select id="orient" class="form-control"><option value="portrait">直向</option><option value="landscape">橫向</option></select></div>
+            
+            <div class="panel-title" style="margin-top:15px">列印模式</div>
+            <div class="form-group"><select id="mode" class="form-control"><option value="single">單頁單筆</option><option value="group">分組列表</option><option value="grid">一頁多張 (標籤)</option></select></div>
+            
+            <div id="grpSet" style="display:none; background:#f0f9eb; padding:10px; border-radius:4px;">
+                <div class="form-group"><label class="form-label">分組欄位</label><select id="grpField" class="form-control"></select></div>
+                <div class="form-group"><label class="form-label">分隔線 Y</label><input type="number" id="splitY" class="form-control" value="150"></div>
+                <div class="form-group"><label class="form-label">行高</label><input type="number" id="rowH" class="form-control" value="30"></div>
             </div>
-            <div class="form-group">
-                <label class="form-label">方向</label>
-                <select class="form-control" id="orientationSelect">
-                    <option value="portrait">直向</option>
-                    <option value="landscape">橫向</option>
-                </select>
-            </div>
-
-            <div class="panel-title" style="margin-top:10px">🖨️ 列印模式</div>
-            <div class="form-group">
-                <select class="form-control" id="reportMode">
-                    <option value="single">單頁單筆</option>
-                    <option value="group">分組列表</option>
-                    <option value="grid">一頁多張 (海報)</option>
-                </select>
-            </div>
-
-            <!-- Settings: Grid Mode -->
-            <div id="gridSettings" style="display:none; background:#ecf5ff; padding:8px; border-radius:4px;">
-                <button class="btn btn-primary btn-block" style="margin-bottom:10px;" onclick="autoCalcGrid()">✨ 自動計算張數</button>
-                <div class="form-group"><label class="form-label">欄 (Cols)</label><input type="number" class="form-control" id="gridCols" value="2"></div>
-                <div class="form-group"><label class="form-label">列 (Rows)</label><input type="number" class="form-control" id="gridRows" value="4"></div>
-                <div class="form-group"><label class="form-label">間距 X/Y</label>
-                    <div style="display:flex; gap:5px"><input type="number" class="form-control" id="gridGapX" value="10"><input type="number" class="form-control" id="gridGapY" value="10"></div>
+            
+            <div id="gridSet" style="display:none; background:#ecf5ff; padding:10px; border-radius:4px;">
+                <button class="btn btn-primary btn-block" onclick="autoCalcGrid()">✨ 自動計算</button>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px">
+                    <div><label class="form-label">欄</label><input type="number" id="gCols" class="form-control" value="2"></div>
+                    <div><label class="form-label">列</label><input type="number" id="gRows" class="form-control" value="4"></div>
                 </div>
             </div>
 
-            <!-- Settings: Group Mode -->
-            <div id="groupSettings" style="display:none; background:#f0f9eb; padding:8px; border-radius:4px;">
-                <div class="form-group"><label class="form-label">分組欄位</label><select class="form-control" id="groupFieldSelect"></select></div>
-                <div class="form-group"><label class="form-label">分隔線 Y</label><input type="number" class="form-control" id="splitYInput" value="150"></div>
-                <div class="form-group"><label class="form-label">行高</label><input type="number" class="form-control" id="rowHeightInput" value="30"></div>
-            </div>
-
-            <div class="panel-title" style="margin-top:20px">✨ 元素屬性</div>
-            <div id="propPanel" style="font-size:12px; color:#999; text-align:center; padding:10px;">選擇元素以編輯</div>
+            <div class="panel-title" style="margin-top:20px">屬性</div>
+            <div id="props" style="text-align:center; color:#999; font-size:12px;">選擇元素</div>
         </div>
     </div>
-
     <div id="print-container"></div>
 
     <script>
-        // ==========================================
-        // 1. 全局狀態與 DOM
-        // ==========================================
-        const state = {
-            fields: [], elements: [], data: [], selectedElement: null,
-            config: {
-                pageSize: 'a4', orientation: 'portrait',
-                widthMm: 210, heightMm: 297,
-                mode: 'single', // single, group, grid
-                groupField: '', splitY: 150, rowHeight: 30,
-                gridCols: 2, gridRows: 4, gridGapX: 10, gridGapY: 10
-            }
-        };
-
-        const els = {
-            canvas: document.getElementById('canvas'),
-            fieldList: document.getElementById('fieldList'),
-            propPanel: document.getElementById('propPanel'),
-            splitLine: document.getElementById('splitLine'),
-            modeSelect: document.getElementById('reportMode'),
-            sizeSelect: document.getElementById('pageSizeSelect'),
-            orientSelect: document.getElementById('orientationSelect')
-        };
-
-        // ==========================================
-        // 2. 核心函式定義 (必須先定義，後執行)
-        // ==========================================
+        // --- State ---
+        const state = { fields: [], elements: [], data: [], selected: null, config: { size: 'a4', orient: 'portrait', w: 210, h: 297, mode: 'single', grpF: '', splitY: 150, rowH: 30, gC: 2, gR: 4, gX: 10, gY: 10 } };
+        const el = (id) => document.getElementById(id);
         
-        // --- 畫布與版面 ---
-        function initCanvas() {
-            updateCanvasSize();
-            els.sizeSelect.onchange = (e) => { state.config.pageSize = e.target.value; updateCanvasSize(); };
-            els.orientSelect.onchange = (e) => { state.config.orientation = e.target.value; updateCanvasSize(); };
+        // --- Init ---
+        initCanvas(); initDrag();
+
+        // --- Canvas & Layout ---
+        function initCanvas() { updSz(); el('pageSize').onchange = (e) => { state.config.size = e.target.value; updSz(); }; el('orient').onchange = (e) => { state.config.orient = e.target.value; updSz(); }; }
+        function updSz() {
+            const m = { 'a4': [210, 297], 'a5': [148, 210], 'receipt80': [80, 297] };
+            let [w, h] = m[state.config.size] || [state.config.w, state.config.h];
+            if (state.config.orient === 'landscape' && state.config.size !== 'receipt80' && state.config.size !== 'custom') [w, h] = [h, w];
+            state.config.w = w; state.config.h = h;
+            el('canvas').style.width = w + 'mm'; el('canvas').style.height = h + 'mm';
+            el('canvas').style.height = state.config.size === 'receipt80' ? 'auto' : h + 'mm';
+            el('canvas').style.minHeight = state.config.size === 'receipt80' ? '150mm' : '0';
         }
 
-        function updateCanvasSize() {
-            const sizeMap = { 'a4': [210, 297], 'a5': [148, 210], 'letter': [216, 279], 'receipt80': [80, 297] };
-            let [w, h] = sizeMap[state.config.pageSize] || [state.config.widthMm, state.config.heightMm];
-            if (state.config.orientation === 'landscape' && state.config.pageSize !== 'receipt80' && state.config.pageSize !== 'custom') {
-                [w, h] = [h, w];
-            }
-            state.config.widthMm = w;
-            state.config.heightMm = h;
-            els.canvas.style.width = w + 'mm';
-            els.canvas.style.height = h + 'mm';
+        // --- Table Wizard ---
+        function openTableModal() { el('tableModal').style.display = 'flex'; }
+        function closeTableModal() { el('tableModal').style.display = 'none'; }
+        function insertTable() {
+            const rows = parseInt(el('tblRows').value) || 2;
+            const cols = parseInt(el('tblCols').value) || 3;
+            const auto = el('autoFill').checked;
+            const startX = 20, startY = 50;
+            const cellW = 35, cellH = 10; // mm to px approx logic handled in addElement (1mm~3.78px) but here we use pixel values directly
+            // Using standard pixel sizes for screen: W=120, H=30
+            const w = 120, h = 30;
 
-            if(state.config.pageSize === 'receipt80') {
-                els.canvas.style.height = 'auto';
-                els.canvas.style.minHeight = '150mm';
-                els.canvas.style.borderBottom = '3px jagged #ccc';
-            } else {
-                els.canvas.style.borderBottom = 'none';
-            }
-        }
-
-        // --- 拖曳邏輯 ---
-        function initDrag() {
-            // 欄位拖曳
-            els.fieldList.addEventListener('dragstart', e => {
-                e.dataTransfer.setData('type', 'field');
-                e.dataTransfer.setData('val', e.target.dataset.f);
-            });
-            els.canvas.addEventListener('dragover', e => e.preventDefault());
-            els.canvas.addEventListener('drop', e => {
-                e.preventDefault();
-                const t = e.dataTransfer.getData('type');
-                if (t) {
-                    const rect = els.canvas.getBoundingClientRect();
-                    addElement(t, e.dataTransfer.getData('val'), e.clientX - rect.left, e.clientY - rect.top);
-                }
-            });
-
-            // 分隔線拖曳
-            let spd = false;
-            els.splitLine.onmousedown = () => spd = true;
-            document.addEventListener('mousemove', (e) => {
-                if (spd) {
-                    const rect = els.canvas.getBoundingClientRect();
-                    state.config.splitY = Math.max(0, e.clientY - rect.top);
-                    updateSplitLine();
-                    document.getElementById('splitYInput').value = Math.round(state.config.splitY);
-                }
-            });
-            document.addEventListener('mouseup', () => spd = false);
-        }
-
-        function updateSplitLine() { els.splitLine.style.top = state.config.splitY + 'px'; }
-
-        // --- PDF 匯入邏輯 ---
-        document.getElementById('pdfUploadBtn').onclick = () => document.getElementById('pdfFile').click();
-        document.getElementById('pdfFile').onchange = async (e) => {
-            const file = e.target.files[0];
-            if(!file) return;
-            if(!confirm('是否匯入 PDF？\n將清除當前畫布並偵測框線。')) return;
-
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-                const page = await pdf.getPage(1);
-                
-                // 設定背景
-                const viewport = page.getViewport({ scale: 1.5 });
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-                await page.render({ canvasContext: context, viewport: viewport }).promise;
-                
-                // 設定尺寸
-                const rawViewport = page.getViewport({ scale: 1.0 });
-                const pdfW = rawViewport.width * 0.352778; 
-                const pdfH = rawViewport.height * 0.352778;
-                
-                state.config.pageSize = 'custom';
-                state.config.widthMm = pdfW;
-                state.config.heightMm = pdfH;
-                
-                els.canvas.style.width = pdfW + 'mm';
-                els.canvas.style.height = pdfH + 'mm';
-                els.canvas.style.backgroundImage = `url(${canvas.toDataURL()})`;
-                els.canvas.style.backgroundSize = '100% 100%';
-                
-                document.getElementById('pageSizeSelect').value = 'custom';
-                document.getElementById('clearBgBtn').style.display = 'inline-block';
-                
-                // 清空並偵測
-                state.elements = [];
-                els.canvas.innerHTML = '<div id="splitLine"></div>';
-                
-                const textContent = await page.getTextContent();
-                textContent.items.forEach(item => {
-                    if (item.str.trim().length === 0) return;
-                    const tx = item.transform[4] * 0.352778;
-                    const ty = (rawViewport.height - item.transform[5] - item.height) * 0.352778;
-                    const w = item.width * 0.352778;
-                    const h = Math.max(item.height * 0.352778, 5);
-                    addElement('text', '', tx-1, ty-1, w+2, h+2, 10, 'normal', 'transparent', '1px dashed #2186c4');
-                });
-                alert('✅ PDF 匯入成功！');
-            } catch (err) {
-                console.error(err);
-                alert('❌ PDF 解析失敗: ' + err.message);
-            }
-        };
-
-        document.getElementById('clearBgBtn').onclick = () => {
-            els.canvas.style.backgroundImage = 'linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px)';
-            els.canvas.style.backgroundSize = '20px 20px';
-            document.getElementById('clearBgBtn').style.display = 'none';
-        };
-
-        // --- 自動排版計算 ---
-        window.autoCalcGrid = () => {
-            if(state.elements.length===0) return alert('畫布是空的');
-            let mx=0, my=0;
-            state.elements.forEach(e=>{mx=Math.max(mx,e.x+e.width); my=Math.max(my,e.y+e.height);});
-            
-            const MM = 3.78; // px per mm
-            const pW = state.config.widthMm * MM;
-            const pH = state.config.heightMm * MM;
-            const margin = 5 * MM;
-            
-            const uW = pW - margin*2;
-            const uH = pH - margin*2;
-            const gX = state.config.gridGapX;
-            const gY = state.config.gridGapY;
-            
-            const c = Math.floor((uW + gX) / (mx + gX));
-            const r = Math.floor((uH + gY) / (my + gY));
-            
-            if(c < 1 || r < 1) return alert('內容太大');
-            
-            state.config.gridCols = c;
-            state.config.gridRows = r;
-            document.getElementById('gridCols').value = c;
-            document.getElementById('gridRows').value = r;
-            alert(`計算完成: ${c}x${r}=${c*r} 張`);
-        };
-
-        // --- 模板 ---
-        window.tpl = (type) => {
-            if(!confirm('清除畫布？')) return;
-            state.elements=[]; els.canvas.innerHTML='<div id="splitLine"></div>';
-            if(type==='labels'){
-                setPage('a4','portrait','grid');
-                addElement('text','',0,0,300,180,12,'normal','transparent','2px solid #ccc');
-                addElement('text','品名:',10,50,50,25,12,'bold');
-            } else if(type==='tw_b2b'){
-                setPage('a4','portrait','group');
-                addElement('title','統一發票',250,30,200,30,22,'bold');
-                state.config.splitY=140;
-                ['品名','單價'].forEach((h,i)=>addElement('text',h,40+i*100,115,100,25));
-                updateSplitLine();
-            } else if(type==='tw_einvoice'){
-                setPage('receipt80','portrait','group');
-                addElement('title','電子發票',30,20,150,30,18,'bold');
-                state.config.splitY=100;
-                updateSplitLine();
-            } else if(type==='table'){
-                setPage('a4','portrait','group');
-                addElement('title','報表',20,20,200,40,24,'bold');
-                state.config.splitY=80;
-                updateSplitLine();
-            }
-        };
-
-        function setPage(s,o,m){
-            els.sizeSelect.value = state.config.pageSize = s;
-            els.orientSelect.value = state.config.orientation = o;
-            els.modeSelect.value = state.config.mode = m;
-            updateCanvasSize();
-            updateSettingsUI();
-        }
-
-        // --- 設定與元素操作 ---
-        els.modeSelect.onchange=(e)=>{state.config.mode=e.target.value; updateSettingsUI();};
-        function updateSettingsUI(){
-            const m=state.config.mode;
-            document.getElementById('groupSettings').style.display=m==='group'?'block':'none';
-            document.getElementById('gridSettings').style.display=m==='grid'?'block':'none';
-            els.splitLine.style.display=m==='group'?'block':'none';
-        }
-        ['gridCols','gridRows','gridGapX','gridGapY'].forEach(id=>document.getElementById(id).onchange=(e)=>state.config[id]=+e.target.value);
-        document.getElementById('splitYInput').onchange=(e)=>{state.config.splitY=+e.target.value; updateSplitLine();};
-        document.getElementById('rowHeightInput').onchange=(e)=>state.config.rowHeight=+e.target.value;
-
-        document.getElementById('addTextBtn').onclick=()=>addElement('text','文字',20,20);
-        document.getElementById('addTitleBtn').onclick=()=>addElement('title','標題',20,20,150,40,20,'bold');
-        document.getElementById('addBoxBtn').onclick=()=>addElement('text','',50,50,100,100,12,'normal','transparent','2px solid #333');
-
-        function addElement(type,c,x,y,w=120,h=30,fs=14,fw='normal',bg='transparent',br='1px dashed #ccc'){
-            const el={id:'el-'+Math.random().toString(36).substr(2,9),type,content:c,x,y,width:w,height:h,fontSize:fs,fontWeight:fw,backgroundColor:bg,border:br,fieldName:type==='field'?c:null};
-            state.elements.push(el); renderEl(el); return el;
-        }
-
-        function renderEl(el){
-            const d=document.createElement('div'); d.id=el.id; d.className='canvas-element'; updateElStyle(d,el);
-            d.innerHTML=`<div class="canvas-element-value">${el.type==='field'?`[${el.content}]`:el.content}</div><div class="resize-handle"></div>`;
-            d.onmousedown=(e)=>{
-                if(e.target.classList.contains('resize-handle'))return;
-                e.stopPropagation(); selectEl(el);
-                const sx=e.clientX,sy=e.clientY,ox=el.x,oy=el.y;
-                const mv=(ev)=>{el.x=ox+(ev.clientX-sx);el.y=oy+(ev.clientY-sy);updateElStyle(d,el);};
-                const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
-                document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
-            };
-            d.querySelector('.resize-handle').onmousedown=(e)=>{
-                e.stopPropagation();
-                const sx=e.clientX,sy=e.clientY,ow=el.width,oh=el.height;
-                const rz=(ev)=>{el.width=Math.max(10,ow+(ev.clientX-sx));el.height=Math.max(10,oh+(ev.clientY-sy));updateElStyle(d,el);renderProps(el);};
-                const st=()=>{document.removeEventListener('mousemove',rz);document.removeEventListener('mouseup',st);};
-                document.addEventListener('mousemove',rz);document.addEventListener('mouseup',st);
-            };
-            els.canvas.appendChild(d);
-        }
-
-        function updateElStyle(d,el){
-            d.style.left=el.x+'px'; d.style.top=el.y+'px'; d.style.width=el.width+'px'; d.style.height=el.height+'px';
-            d.style.fontSize=el.fontSize+'px'; d.style.fontWeight=el.fontWeight; d.style.background=el.backgroundColor; d.style.border=el.border;
-        }
-        function selectEl(el){state.selectedElement=el; document.querySelectorAll('.canvas-element').forEach(d=>d.classList.remove('selected')); document.getElementById(el.id).classList.add('selected'); renderProps(el);}
-        function renderProps(el){
-            els.propPanel.innerHTML=`
-                <div class="form-group"><label class="form-label">內容</label><input class="form-control" value="${el.content}" oninput="setProp('${el.id}','content',this.value)"></div>
-                <div class="form-group"><label class="form-label">字體大小</label><input type="number" class="form-control" value="${el.fontSize}" oninput="setProp('${el.id}','fontSize',this.value)"></div>
-                <div class="form-group"><label class="form-label">背景色</label><input type="color" style="width:100%" value="${el.backgroundColor==='transparent'?'#ffffff':el.backgroundColor}" oninput="setProp('${el.id}','backgroundColor',this.value)"></div>
-                <div class="form-group"><label class="form-label">邊框</label><select class="form-control" onchange="setProp('${el.id}','border',this.value)"><option value="none">無</option><option value="1px solid #000">實線</option><option value="1px dashed #2186c4">藍虛線</option></select></div>
-                <button class="btn btn-danger btn-block" onclick="delEl('${el.id}')">刪除</button>`;
-        }
-        window.setProp=(id,k,v)=>{const el=state.elements.find(e=>e.id===id); if(el){el[k]=v; updateElStyle(document.getElementById(id),el); if(k==='content')document.getElementById(id).querySelector('.canvas-element-value').innerText=el.type==='field'?`[${v}]`:v;}};
-        window.delEl=(id)=>{state.elements=state.elements.filter(e=>e.id!==id); document.getElementById(id).remove(); els.propPanel.innerHTML='';};
-
-        // --- 檔案處理 ---
-        document.getElementById('dataUploadBtn').onclick=()=>document.getElementById('dataFile').click();
-        document.getElementById('dataFile').onchange=(e)=>{
-            const f=e.target.files[0]; if(!f)return;
-            const r=new FileReader();
-            r.onload=(ev)=>{
-                state.data=f.name.endsWith('.json')?JSON.parse(ev.target.result):parseCSV(ev.target.result);
-                state.fields=Object.keys(state.data[0]||{});
-                renderFields();
-                document.getElementById('fileInfo').innerText=`✅ ${state.data.length} 筆數據`;
-            };
-            r.readAsText(f);
-        };
-        function parseCSV(t){const [h,...r]=t.trim().split('\n'); const ks=h.split(',').map(s=>s.trim()); return r.map(l=>l.split(',').reduce((a,v,i)=>({...a,[ks[i]]:v.trim()}),{}));}
-        function renderFields(){
-            els.fieldList.innerHTML=state.fields.map(f=>`<div class="field-item" draggable="true" data-f="${f}">📄 ${f}</div>`).join('');
-            const sel=document.getElementById('groupFieldSelect');
-            sel.innerHTML=`<option value="">--</option>`+state.fields.map(f=>`<option value="${f}">${f}</option>`).join('');
-        }
-
-        // ==========================================
-        // 3. 列印執行 (移到最後，確保函式已定義)
-        // ==========================================
-        document.getElementById('printBtn').onclick = () => {
-            const ctr = document.getElementById('print-container');
-            ctr.innerHTML = '';
-            
-            // 預覽功能
-            if (!state.data.length && state.elements.length) {
-                const dummy = {};
-                state.fields.forEach(f => dummy[f] = `(預覽:${f})`);
-                const originalData = state.data;
-                state.data = [dummy];
-                runPrintProcess(ctr);
-                state.data = originalData;
-                return;
+            // Switch to Group mode if inserting many rows
+            if(rows > 1) {
+                state.config.mode = 'group';
+                el('mode').value = 'group';
+                updMode();
+                state.config.splitY = startY + h; // Set split line below header
+                state.config.rowH = h;
+                updSplit();
+                el('splitY').value = Math.round(state.config.splitY);
             }
 
-            if (!state.data.length) return alert('無數據可列印');
-            runPrintProcess(ctr);
-        };
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    let type = 'text';
+                    let content = '';
+                    let bg = 'transparent';
+                    let fw = 'normal';
 
-        function runPrintProcess(ctr) {
-            const style = document.createElement('style');
-            style.innerHTML = `@media print { @page { size: ${state.config.pageSize === 'custom' ? 'auto' : state.config.pageSize} ${state.config.orientation}; margin: 0; } }`;
-            ctr.appendChild(style);
-
-            const m = state.config.mode;
-            if (m === 'single') printSingle(ctr);
-            else if (m === 'group') printGroup(ctr);
-            else if (m === 'grid') printGrid(ctr);
-
-            setTimeout(() => {
-                window.print();
-                ctr.innerHTML = '';
-            }, 500);
-        }
-
-        function createPage() {
-            const d = document.createElement('div');
-            d.className = 'print-page';
-            d.style.width = state.config.widthMm + 'mm';
-            d.style.height = state.config.pageSize === 'receipt80' ? 'auto' : (state.config.heightMm + 'mm');
-            return d;
-        }
-
-        function createEl(el, row, dx = 0, dy = 0) {
-            const d = document.createElement('div');
-            d.className = 'print-element';
-            const fx = el.x + dx;
-            const fy = el.y + dy;
-            d.style.left = fx + 'px';
-            d.style.top = fy + 'px';
-            d.style.width = el.width + 'px';
-            d.style.height = el.height + 'px';
-            d.style.fontSize = el.fontSize + 'px';
-            d.style.fontWeight = el.fontWeight;
-            d.style.background = el.backgroundColor;
-            d.style.border = el.border;
-            d.innerText = el.type === 'field' && row ? (row[el.fieldName] || '') : el.content;
-            d.dataset.bottom = fy + el.height;
-            return d;
-        }
-
-        function printSingle(ctr) {
-            state.data.forEach(row => {
-                const pg = createPage();
-                let mb = 0;
-                state.elements.forEach(el => {
-                    const domEl = createEl(el, row);
-                    pg.appendChild(domEl);
-                    mb = Math.max(mb, +domEl.dataset.bottom);
-                });
-                if (state.config.pageSize === 'receipt80') pg.style.height = (mb + 20) + 'px';
-                ctr.appendChild(pg);
-            });
-        }
-
-        function printGroup(ctr) {
-            const groups = {};
-            const keyF = state.config.groupField;
-            state.data.forEach(r => {
-                const k = keyF ? r[keyF] : 'ALL';
-                if (!groups[k]) groups[k] = [];
-                groups[k].push(r);
-            });
-
-            const hEls = state.elements.filter(e => e.y < state.config.splitY);
-            const dEls = state.elements.filter(e => e.y >= state.config.splitY);
-            dEls.forEach(e => e._oy = e.y - state.config.splitY);
-
-            const pageH = state.config.pageSize === 'receipt80' ? 99999 : 1050;
-
-            Object.values(groups).forEach(rows => {
-                let pg = createPage();
-                ctr.appendChild(pg);
-                let cm = 0;
-
-                const renderHeader = () => hEls.forEach(e => {
-                    const el = createEl(e, rows[0]);
-                    pg.appendChild(el);
-                    cm = Math.max(cm, +el.dataset.bottom);
-                });
-                renderHeader();
-
-                let y = state.config.splitY;
-                rows.forEach(row => {
-                    if (y + state.config.rowHeight > pageH) {
-                        pg = createPage();
-                        ctr.appendChild(pg);
-                        renderHeader();
-                        y = state.config.splitY;
-                        cm = y;
+                    // Logic: Row 0 is Header
+                    if (r === 0) {
+                        bg = '#f0f0f0'; fw = 'bold';
+                        content = auto && state.fields[c] ? state.fields[c] : `標題 ${c+1}`;
+                    } else {
+                        // Logic: Row > 0 is Body
+                        type = auto && state.fields[c] ? 'field' : 'text';
+                        content = auto && state.fields[c] ? state.fields[c] : `內容`;
                     }
-                    dEls.forEach(e => {
-                        const el = createEl(e, row, 0, 0); // 手動定位
-                        const absY = y + (e.y - state.config.splitY);
-                        el.style.top = absY + 'px';
-                        el.style.left = e.x + 'px';
-                        pg.appendChild(el);
-                        cm = Math.max(cm, absY + e.height);
-                    });
-                    y += state.config.rowHeight;
-                });
-                if (state.config.pageSize === 'receipt80') pg.style.height = (cm + 50) + 'px';
-            });
-        }
 
-        function printGrid(ctr) {
-            const { gridCols, gridRows, gridGapX, gridGapY } = state.config;
-            let maxX = 0, maxY = 0;
-            state.elements.forEach(e => {
-                maxX = Math.max(maxX, e.x + e.width);
-                maxY = Math.max(maxY, e.y + e.height);
-            });
-
-            const cellW = maxX + gridGapX;
-            const cellH = maxY + gridGapY;
-
-            // 自動置中計算
-            const MM_TO_PX = 3.78;
-            const pageW = state.config.widthMm * MM_TO_PX;
-            const pageH = state.config.heightMm * MM_TO_PX;
-            const contentW = (cellW * gridCols) - gridGapX;
-            const contentH = (cellH * gridRows) - gridGapY;
-            const startX = Math.max(20, (pageW - contentW) / 2);
-            const startY = Math.max(20, (pageH - contentH) / 2);
-
-            let pg = createPage();
-            ctr.appendChild(pg);
-            let idx = 0;
-
-            state.data.forEach(row => {
-                if (idx >= gridCols * gridRows) {
-                    pg = createPage();
-                    ctr.appendChild(pg);
-                    idx = 0;
+                    // Only generate 1 body row if in group mode (it will repeat)
+                    // But if user asked for static table (rows), generate all.
+                    // For flexible "Report" style, usually we generate 1 header row + 1 body row template.
+                    
+                    addElement(type, content, startX + c * w, startY + r * h, w, h, 14, fw, bg, '1px solid #333');
                 }
-                const col = idx % gridCols;
-                const r = Math.floor(idx / gridCols);
-                const offsetX = startX + (col * cellW);
-                const offsetY = startY + (r * cellH);
-
-                state.elements.forEach(el => pg.appendChild(createEl(el, row, offsetX, offsetY)));
-                idx++;
-            });
+            }
+            closeTableModal();
         }
 
-        // ==========================================
-        // 4. 初始化執行 (確保所有函式已載入)
-        // ==========================================
-        initCanvas();
-        initDrag();
+        // --- PDF Import (Background Only) ---
+        el('pdfBtn').onclick = () => el('pdfFile').click();
+        el('pdfFile').onchange = async (e) => {
+            const f = e.target.files[0]; if (!f) return;
+            if(!confirm('匯入 PDF 為底圖？(將清除現有畫布)')) return;
+            
+            try {
+                const pdf = await pdfjsLib.getDocument(await f.arrayBuffer()).promise;
+                const page = await pdf.getPage(1);
+                const vp = page.getViewport({ scale: 1.5 });
+                const cvs = document.createElement('canvas'); cvs.width = vp.width; cvs.height = vp.height;
+                await page.render({ canvasContext: cvs.getContext('2d'), viewport: vp }).promise;
+                
+                const rawVp = page.getViewport({ scale: 1.0 });
+                const wMm = rawVp.width * 0.352778, hMm = rawVp.height * 0.352778;
+                
+                state.config.size = 'custom'; state.config.w = wMm; state.config.h = hMm;
+                el('pageSize').value = 'custom';
+                el('canvas').style.backgroundImage = `url(${cvs.toDataURL()})`;
+                el('canvas').style.backgroundSize = '100% 100%';
+                el('clearBgBtn').style.display = 'inline-block';
+                
+                state.elements = []; el('canvas').innerHTML = '<div id="splitLine"></div>';
+                updSz();
+            } catch(err) { alert('PDF 錯誤'); }
+        };
+        el('clearBgBtn').onclick = () => { el('canvas').style.backgroundImage = 'none'; el('clearBgBtn').style.display = 'none'; };
 
+        // --- Elements ---
+        function addElement(type, c, x, y, w = 120, h = 30, fs = 14, fw = 'normal', bg = 'transparent', br = '1px dashed #ccc') {
+            const id = 'el-' + Math.random().toString(36).substr(2, 9);
+            const item = { id, type, content: c, x, y, width: w, height: h, fontSize: fs, fontWeight: fw, backgroundColor: bg, border: br, fieldName: type === 'field' ? c : null };
+            state.elements.push(item); renderEl(item); return item;
+        }
+
+        function renderEl(item) {
+            const d = document.createElement('div'); d.id = item.id; d.className = 'canvas-element'; updEl(d, item);
+            d.innerHTML = `<div class="canvas-element-value">${item.type === 'field' ? `[${item.content}]` : item.content}</div><div class="resize-handle"></div>`;
+            d.onmousedown = (e) => { if (e.target.className.includes('resize')) return; e.stopPropagation(); selEl(item); drag(e, item, d, 'move'); };
+            d.querySelector('.resize-handle').onmousedown = (e) => { e.stopPropagation(); drag(e, item, d, 'resize'); };
+            el('canvas').appendChild(d);
+        }
+
+        function drag(e, item, d, mode) {
+            const sx = e.clientX, sy = e.clientY;
+            const startVal = mode === 'move' ? { x: item.x, y: item.y } : { w: item.width, h: item.height };
+            const mv = (ev) => {
+                if (mode === 'move') { item.x = startVal.x + (ev.clientX - sx); item.y = startVal.y + (ev.clientY - sy); }
+                else { item.width = Math.max(5, startVal.w + (ev.clientX - sx)); item.height = Math.max(5, startVal.h + (ev.clientY - sy)); renderProps(item); }
+                updEl(d, item);
+            };
+            const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); };
+            document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
+        }
+
+        function updEl(d, item) {
+            Object.assign(d.style, { left: item.x + 'px', top: item.y + 'px', width: item.width + 'px', height: item.height + 'px', fontSize: item.fontSize + 'px', fontWeight: item.fontWeight, background: item.backgroundColor, border: item.border });
+        }
+        function selEl(item) { state.selected = item; document.querySelectorAll('.selected').forEach(x => x.classList.remove('selected')); el(item.id).classList.add('selected'); renderProps(item); }
+
+        function renderProps(item) {
+            el('props').innerHTML = `
+                <div class="form-group"><label>內容</label><input class="form-control" value="${item.content}" oninput="setProp('${item.id}','content',this.value)"></div>
+                <div class="form-group"><label>字體大小</label><input type="number" class="form-control" value="${item.fontSize}" oninput="setProp('${item.id}','fontSize',this.value)"></div>
+                <div class="form-group"><label>背景色</label><input type="color" style="width:100%" value="${item.backgroundColor === 'transparent' ? '#ffffff' : item.backgroundColor}" oninput="setProp('${item.id}','backgroundColor',this.value)"></div>
+                <div class="form-group"><label>邊框</label><select class="form-control" onchange="setProp('${item.id}','border',this.value)"><option value="none">無</option><option value="1px solid #000">實線</option><option value="2px solid #000">粗實線</option><option value="1px dashed #000">虛線</option></select></div>
+                <button class="btn btn-danger btn-block" onclick="delEl('${item.id}')">刪除</button>
+            `;
+        }
+        window.setProp = (id, k, v) => { const item = state.elements.find(x => x.id === id); if (item) { item[k] = v; updEl(el(id), item); if (k === 'content') el(id).querySelector('.canvas-element-value').innerText = item.type === 'field' ? `[${v}]` : v; } };
+        window.delEl = (id) => { state.elements = state.elements.filter(x => x.id !== id); el(id).remove(); el('props').innerHTML = ''; };
+
+        // --- File & Drag ---
+        el('dataBtn').onclick = () => el('dataFile').click();
+        el('dataFile').onchange = (e) => {
+            const f = e.target.files[0]; if (!f) return;
+            const r = new FileReader();
+            r.onload = (ev) => {
+                state.data = f.name.endsWith('.json') ? JSON.parse(ev.target.result) : parseCSV(ev.target.result);
+                state.fields = Object.keys(state.data[0] || {});
+                renderFields(); el('fileInfo').innerText = `✅ ${state.data.length} 筆資料`;
+            }; r.readAsText(f);
+        };
+        function parseCSV(t) { const [h, ...r] = t.trim().split('\n'); const ks = h.split(',').map(s => s.trim()); return r.map(l => l.split(',').reduce((a, v, i) => ({ ...a, [ks[i]]: v.trim() }), {})); }
+        function renderFields() {
+            el('fieldList').innerHTML = state.fields.map(f => `<div class="field-item" draggable="true" data-f="${f}">📄 ${f}</div>`).join('');
+            el('grpField').innerHTML = `<option value="">--</option>` + state.fields.map(f => `<option value="${f}">${f}</option>`).join('');
+            initDrag();
+        }
+        function initDrag() {
+            el('fieldList').ondragstart = (e) => { e.dataTransfer.setData('type', 'field'); e.dataTransfer.setData('val', e.target.dataset.f); };
+            el('canvas').ondragover = (e) => e.preventDefault();
+            el('canvas').ondrop = (e) => { e.preventDefault(); const t = e.dataTransfer.getData('type'); if (t) addElement(t, e.dataTransfer.getData('val'), e.clientX - el('canvas').getBoundingClientRect().left, e.clientY - el('canvas').getBoundingClientRect().top); };
+            let sp = false; el('splitLine').onmousedown = () => sp = true;
+            document.onmousemove = (e) => { if (sp) { state.config.splitY = Math.max(0, e.clientY - el('canvas').getBoundingClientRect().top); updSplit(); el('splitY').value = Math.round(state.config.splitY); } };
+            document.onmouseup = () => sp = false;
+        }
+        function updSplit() { el('splitLine').style.top = state.config.splitY + 'px'; }
+
+        // --- Settings ---
+        el('mode').onchange = (e) => { state.config.mode = e.target.value; updMode(); };
+        function updMode() {
+            const m = state.config.mode;
+            el('grpSet').style.display = m === 'group' ? 'block' : 'none';
+            el('gridSet').style.display = m === 'grid' ? 'block' : 'none';
+            el('splitLine').style.display = m === 'group' ? 'block' : 'none';
+        }
+        ['gCols', 'gRows', 'gX', 'gY'].forEach(k => el(k).onchange = (e) => state.config[k] = +e.target.value);
+        el('splitY').onchange = (e) => { state.config.splitY = +e.target.value; updSplit(); };
+        el('rowH').onchange = (e) => state.config.rowH = +e.target.value;
+
+        window.autoCalcGrid = () => {
+            if (!state.elements.length) return alert('空畫布');
+            let mx = 0, my = 0; state.elements.forEach(e => { mx = Math.max(mx, e.x + e.width); my = Math.max(my, e.y + e.height); });
+            const MM = 3.78, pW = state.config.w * MM, pH = state.config.h * MM, m = 5 * MM;
+            const c = Math.floor((pW - m * 2 + state.config.gX) / (mx + state.config.gX));
+            const r = Math.floor((pH - m * 2 + state.config.gY) / (my + state.config.gY));
+            if (c < 1 || r < 1) return alert('內容太大');
+            state.config.gC = c; state.config.gR = r; el('gCols').value = c; el('gRows').value = r; alert(`計算: ${c}x${r}`);
+        };
+
+        // --- Print ---
+        el('printBtn').onclick = () => {
+            const c = el('print-container'); c.innerHTML = '';
+            if (!state.data.length && state.elements.length) { const d = {}; state.fields.forEach(f => d[f] = `(${f})`); var old = state.data; state.data = [d]; runP(c); state.data = old; return; }
+            if (!state.data.length) return alert('無數據');
+            runP(c);
+        };
+
+        function runP(c) {
+            const s = document.createElement('style'); s.innerHTML = `@media print{@page{size:${state.config.size === 'custom' ? 'auto' : state.config.size} ${state.config.orient};margin:0;}}`; c.appendChild(s);
+            const m = state.config.mode;
+            if (m === 'single') pS(c); else if (m === 'group') pG(c); else if (m === 'grid') pGd(c);
+            setTimeout(() => { window.print(); c.innerHTML = ''; }, 500);
+        }
+
+        function mkPg() { const d = document.createElement('div'); d.className = 'print-page'; d.style.width = state.config.w + 'mm'; d.style.height = state.config.size === 'receipt80' ? 'auto' : state.config.h + 'mm'; return d; }
+        function mkEl(item, r, dx = 0, dy = 0) {
+            const d = document.createElement('div'); d.className = 'print-element';
+            const fx = item.x + dx, fy = item.y + dy;
+            Object.assign(d.style, { left: fx + 'px', top: fy + 'px', width: item.width + 'px', height: item.height + 'px', fontSize: item.fontSize + 'px', fontWeight: item.fontWeight, background: item.backgroundColor, border: item.border });
+            d.innerText = item.type === 'field' && r ? (r[item.fieldName] || '') : item.content; d.dataset.b = fy + item.height; return d;
+        }
+
+        function pS(c) { state.data.forEach(r => { const p = mkPg(); let mb = 0; state.elements.forEach(e => { const x = mkEl(e, r); p.appendChild(x); mb = Math.max(mb, +x.dataset.b); }); if (state.config.size === 'receipt80') p.style.height = (mb + 20) + 'px'; c.appendChild(p); }); }
+        function pG(c) {
+            const g = {}, kf = state.config.grpF; state.data.forEach(r => { const k = kf ? r[kf] : 'A'; if (!g[k]) g[k] = []; g[k].push(r); });
+            const hE = state.elements.filter(e => e.y < state.config.splitY), dE = state.elements.filter(e => e.y >= state.config.splitY); dE.forEach(e => e.oy = e.y - state.config.splitY);
+            const pH = state.config.size === 'receipt80' ? 99999 : 1050;
+            Object.values(g).forEach(rs => {
+                let p = mkPg(), cm = 0; const rh = () => hE.forEach(e => { const x = mkEl(e, rs[0]); p.appendChild(x); cm = Math.max(cm, +x.dataset.b); }); rh();
+                let y = state.config.splitY;
+                rs.forEach(r => { if (y + state.config.rowH > pH) { p = mkPg(); c.appendChild(p); rh(); y = state.config.splitY; cm = y; } dE.forEach(e => { const x = mkEl(e, r, 0, y + e.oy - e.y); x.style.top = (y + e.oy) + 'px'; p.appendChild(x); cm = Math.max(cm, y + e.oy + e.height); }); y += state.config.rowH; });
+                if (state.config.size === 'receipt80') p.style.height = (cm + 50) + 'px';
+            });
+        }
+        function pGd(c) {
+            const { gC, gR, gX, gY } = state.config;
+            let mx = 0, my = 0; state.elements.forEach(e => { mx = Math.max(mx, e.x + e.width); my = Math.max(my, e.y + e.height); });
+            const cW = mx + gX, cH = my + gY, MM = 3.78, pW = state.config.w * MM, pH = state.config.h * MM;
+            const tW = cW * gC - gX, tH = cH * gR - gY;
+            const sx = Math.max(20, (pW - tW) / 2), sy = Math.max(20, (pH - tH) / 2);
+            let p = mkPg(), i = 0;
+            state.data.forEach(r => { if (i >= gC * gR) { p = mkPg(); c.appendChild(p); i = 0; } const col = i % gC, row = Math.floor(i / gC); state.elements.forEach(e => p.appendChild(mkEl(e, r, sx + col * cW, sy + row * cH))); i++; });
+        }
     </script>
 </body>
 </html>
