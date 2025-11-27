@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Report Studio v4.0 - 全能版面設計</title>
+    <title>Pro Report Studio v4.1 - 台灣發票專用版</title>
     <style>
         :root {
             --primary: #2186c4; --primary-hover: #1a6a9e;
@@ -12,13 +12,13 @@
             --success: #67c23a; --danger: #f56c6c;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+        body { font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
         
         /* Layout */
         .header { background: #2b3a42; color: white; padding: 0 20px; height: 60px; display: flex; justify-content: space-between; align-items: center; }
         .main-layout { display: flex; flex: 1; overflow: hidden; }
         .panel { background: var(--surface); display: flex; flex-direction: column; border-right: 1px solid var(--border); }
-        .left-panel { width: 260px; padding: 15px; overflow-y: auto; }
+        .left-panel { width: 280px; padding: 15px; overflow-y: auto; }
         .center-panel { flex: 1; background: #525659; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow: auto; }
         .right-panel { width: 320px; padding: 15px; overflow-y: auto; border-left: 1px solid var(--border); }
         .panel-title { font-size: 14px; font-weight: 700; color: #606266; margin-bottom: 12px; text-transform: uppercase; border-bottom: 2px solid #eee; padding-bottom: 5px;}
@@ -28,9 +28,9 @@
         .upload-area:hover { border-color: var(--primary); background: #ecf5ff; }
         .field-item { padding: 6px 10px; background: #f4f4f5; border: 1px solid #e9e9eb; margin-bottom: 5px; cursor: grab; font-size: 12px; }
         
-        .tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 15px; }
-        .btn-tpl { padding: 6px; border: 1px solid var(--border); background: white; cursor: pointer; font-size: 12px; text-align: center; }
-        .btn-tpl:hover { border-color: var(--primary); color: var(--primary); }
+        .tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
+        .btn-tpl { padding: 8px; border: 1px solid var(--border); background: white; cursor: pointer; font-size: 12px; text-align: center; border-radius: 4px; transition: 0.2s; }
+        .btn-tpl:hover { border-color: var(--primary); color: var(--primary); background: #f0f9eb; font-weight: bold; }
 
         /* Canvas */
         .canvas-wrapper { box-shadow: 0 0 20px rgba(0,0,0,0.5); transition: 0.3s; margin: auto; }
@@ -72,7 +72,7 @@
 </head>
 <body>
     <div class="header">
-        <div style="font-weight: bold;">📊 Pro Report Studio v4.0</div>
+        <div style="font-weight: bold;">📊 Pro Report Studio v4.1 (TW Invoice)</div>
         <div><button class="btn btn-success" id="printBtn">🖨️ 列印 / 匯出 PDF</button></div>
     </div>
 
@@ -83,12 +83,12 @@
             <div class="upload-area" id="uploadArea">📂 上傳 CSV / JSON<input type="file" id="fileInput" hidden></div>
             <div id="fileInfo" style="font-size:12px; color:#67c23a; margin-bottom:10px;"></div>
             
-            <div class="panel-title">2. 快速範本</div>
+            <div class="panel-title">2. 台灣發票模版</div>
             <div class="tpl-grid">
-                <div class="btn-tpl" onclick="tpl('table')">📑 自動表格</div>
-                <div class="btn-tpl" onclick="tpl('receipt')">🧾 熱感應收據</div>
+                <div class="btn-tpl" onclick="tpl('tw_b2b')">🇹🇼 三聯式發票 (B2B)</div>
+                <div class="btn-tpl" onclick="tpl('tw_einvoice')">🧾 電子發票證明聯</div>
+                <div class="btn-tpl" onclick="tpl('table')">📑 通用報表</div>
                 <div class="btn-tpl" onclick="tpl('labels')">🏷️ 標籤貼紙(8格)</div>
-                <div class="btn-tpl" onclick="tpl('invoice')">💰 商業發票</div>
             </div>
 
             <div class="panel-title">3. 可用欄位</div>
@@ -100,6 +100,7 @@
             <div style="margin-bottom:10px; display:flex; gap:10px;">
                 <button class="btn" style="background:white; color:#333" id="addTextBtn">➕ 文字</button>
                 <button class="btn" style="background:white; color:#333" id="addTitleBtn">📌 標題</button>
+                <button class="btn" style="background:white; color:#333" id="addBoxBtn">⬜ 外框</button>
             </div>
             <div class="canvas-wrapper">
                 <div class="canvas" id="canvas" style="width:210mm; height:297mm;">
@@ -116,8 +117,7 @@
                 <select class="form-control" id="pageSizeSelect">
                     <option value="a4">A4 (210 x 297 mm)</option>
                     <option value="a5">A5 (148 x 210 mm)</option>
-                    <option value="b5">B5 (176 x 250 mm)</option>
-                    <option value="receipt80">80mm 收據 (無限長)</option>
+                    <option value="receipt80">80mm 收據/發票</option>
                     <option value="custom">自訂尺寸</option>
                 </select>
             </div>
@@ -134,7 +134,7 @@
                 <label class="form-label">排列方式</label>
                 <select class="form-control" id="reportMode">
                     <option value="single">單頁單筆 (每筆一頁)</option>
-                    <option value="group">表格列表 (Master-Detail)</option>
+                    <option value="group">分組列表 (Master-Detail)</option>
                     <option value="grid">一頁多張 (海報/標籤)</option>
                 </select>
             </div>
@@ -142,7 +142,7 @@
             <!-- Settings: Table Mode -->
             <div id="groupSettings" style="display:none; background:#f0f9eb; padding:8px; border-radius:4px;">
                 <div class="form-group">
-                    <label class="form-label">列表分組欄位</label>
+                    <label class="form-label">列表分組欄位 (如: 發票號碼)</label>
                     <select class="form-control" id="groupFieldSelect"></select>
                 </div>
                 <div class="form-group"><label class="form-label">分隔線 Y (px)</label><input type="number" class="form-control" id="splitYInput" value="150"></div>
@@ -226,13 +226,90 @@
             }
         }
 
-        // --- 2. Templates ---
+        // --- 2. Templates (TW Specific) ---
         window.tpl = (type) => {
             if(!confirm('這將清除當前畫布，確定嗎？')) return;
             state.elements = [];
             els.canvas.innerHTML = '<div id="splitLine"></div>';
             
-            if (type === 'table') {
+            // 🇹🇼 三聯式發票 (B2B)
+            if (type === 'tw_b2b') {
+                setPage('a4', 'portrait', 'group'); // 也可以用 A5 landscape
+                
+                // 表頭
+                addElement('title', '電子計算機統一發票', 250, 30, 300, 30, 22, 'bold');
+                addElement('text', '中華民國   年   月   日', 300, 60, 200, 20, 12);
+                
+                // 買受人區塊
+                addElement('text', '買受人：', 40, 90, 60, 25, 12, 'bold');
+                addElement('field', '買受人名稱', 100, 90, 200, 25, 12, 'normal', '#eee', '1px solid #999');
+                addElement('text', '統一編號：', 500, 90, 80, 25, 12, 'bold');
+                addElement('field', '買受人統編', 580, 90, 150, 25, 12, 'normal', '#eee', '1px solid #999');
+                
+                // 發票號碼區
+                addElement('text', '發票號碼：', 500, 30, 80, 25, 12, 'bold', 'transparent', 'none');
+                addElement('field', '發票號碼', 580, 30, 150, 25, 16, 'bold', '#fff', '2px solid #333');
+
+                // 表格頭部
+                state.config.splitY = 140;
+                const headers = ['品名', '數量', '單價', '金額', '備註'];
+                const widths = [250, 80, 100, 100, 150];
+                let curX = 40;
+                
+                headers.forEach((h, i) => {
+                    addElement('text', h, curX, 115, widths[i], 25, 12, 'bold', '#f0f0f0', '1px solid #333');
+                    // 表格內容預覽
+                    addElement('field', h, curX, 140, widths[i], 25, 12, 'normal', 'transparent', '1px solid #ccc');
+                    curX += widths[i];
+                });
+
+                // 頁尾統計 (模擬)
+                const fY = 700; // 假設頁面底部
+                addElement('text', '銷售額合計 (Sales Amt)', 400, fY, 150, 25, 12, 'bold', 'transparent', '1px solid #ccc');
+                addElement('field', '銷售額', 550, fY, 130, 25, 12, 'normal', 'transparent', '1px solid #ccc');
+                
+                addElement('text', '營業稅 (Tax)', 400, fY+25, 150, 25, 12, 'bold', 'transparent', '1px solid #ccc');
+                addElement('field', '稅額', 550, fY+25, 130, 25, 12, 'normal', 'transparent', '1px solid #ccc');
+                
+                addElement('text', '總計 (Total)', 400, fY+50, 150, 25, 12, 'bold', 'transparent', '1px solid #ccc');
+                addElement('field', '總計金額', 550, fY+50, 130, 25, 12, 'normal', 'transparent', '1px solid #ccc');
+                
+                updateSplitLine();
+            }
+            // 🧾 電子發票證明聯 (57mm/80mm)
+            else if (type === 'tw_einvoice') {
+                setPage('receipt80', 'portrait', 'group');
+                const cx = 20; // center offset approx
+                
+                // Logo & Title
+                addElement('text', '(店名/Logo)', cx+50, 10, 150, 25, 14, 'bold');
+                addElement('title', '電子發票證明聯', cx+30, 40, 200, 30, 18, 'bold');
+                addElement('text', '112年 11-12月', cx+60, 70, 150, 25, 16, 'bold');
+                addElement('field', '發票號碼', cx+40, 95, 200, 25, 18, 'bold'); // AB-12345678
+                
+                addElement('text', '隨機碼: 1234   總計: $999', cx+10, 125, 250, 20, 11);
+                addElement('text', '賣方統編: 00000000   買方統編: 00000000', cx+10, 145, 260, 20, 10);
+                
+                // QR Code 佔位符
+                addElement('text', '[QR Code 左]', cx+10, 170, 80, 80, 10, 'normal', '#eee', '1px solid #333');
+                addElement('text', '[QR Code 右]', cx+170, 170, 80, 80, 10, 'normal', '#eee', '1px solid #333');
+                
+                // 交易明細
+                state.config.splitY = 270;
+                addElement('text', '品名', 10, 250, 120, 20, 11, 'normal');
+                addElement('text', '數量', 140, 250, 40, 20, 11, 'normal');
+                addElement('text', '單價', 190, 250, 40, 20, 11, 'normal');
+                addElement('text', '金額', 240, 250, 50, 20, 11, 'normal');
+                
+                // 列表內容
+                if(state.fields.length > 0) {
+                    addElement('field', state.fields[0], 10, 270, 120, 20, 10); // Product
+                    addElement('field', '1', 140, 270, 40, 20, 10);
+                }
+                updateSplitLine();
+            }
+            // 通用報表
+            else if (type === 'table') {
                 setPage('a4', 'portrait', 'group');
                 const colW = 120, rowH = 30;
                 addElement('title', '○○報表', 20, 20, 200, 40, 24, 'bold');
@@ -245,40 +322,17 @@
                 });
                 updateSplitLine();
             }
-            else if (type === 'receipt') {
-                setPage('receipt80', 'portrait', 'group');
-                addElement('title', 'STORE RECEIPT', 5, 10, 280, 30, 18, 'bold');
-                addElement('text', '--------------------------------', 0, 40, 300, 20);
-                addElement('text', 'Date: 2023-11-27', 5, 60, 200, 20);
-                
-                state.config.splitY = 100;
-                // Simple list layout
-                addElement('text', 'Item', 5, 80, 150, 20, 12, 'bold');
-                addElement('text', 'Price', 200, 80, 80, 20, 12, 'bold');
-                
-                if(state.fields.length >= 2) {
-                    addElement('field', state.fields[0], 5, 100, 150, 20);
-                    addElement('field', state.fields[1], 200, 100, 80, 20);
-                }
-                updateSplitLine();
-            }
+            // 標籤貼紙
             else if (type === 'labels') {
-                // Label Mode: Use Grid
                 setPage('a4', 'portrait', 'grid');
-                state.config.gridCols = 2;
-                state.config.gridRows = 4;
-                state.config.gridGapX = 10;
-                state.config.gridGapY = 10;
+                state.config.gridCols = 2; state.config.gridRows = 4;
+                state.config.gridGapX = 10; state.config.gridGapY = 10;
                 document.getElementById('gridCols').value = 2;
                 document.getElementById('gridRows').value = 4;
 
-                // Draw one label box (visual guide)
-                // A4 width ~790px. 2 cols + gaps -> approx 350px width per label
                 const labelW = 350, labelH = 200;
-                
-                // Add border container for the label
-                addElement('text', '', 0, 0, labelW, labelH, 12, 'normal', 'transparent', '2px solid #ccc');
-                addElement('title', '員工證', 20, 20, 100, 30, 16, 'bold');
+                addElement('text', '', 0, 0, labelW, labelH, 12, 'normal', 'transparent', '2px solid #ccc'); // Border
+                addElement('title', '產品標籤', 20, 20, 150, 30, 16, 'bold');
                 
                 let y = 60;
                 state.fields.slice(0, 3).forEach(f => {
@@ -286,14 +340,6 @@
                     addElement('field', f, 100, y, 200, 25, 12, 'normal', '#eee');
                     y += 30;
                 });
-            }
-            else if (type === 'invoice') {
-                setPage('a4', 'portrait', 'single');
-                addElement('title', 'INVOICE', 500, 40, 200, 40, 30, 'bold');
-                addElement('text', 'No. #123456', 500, 80, 200, 30);
-                // Demo
-                addElement('text', 'Bill To:', 40, 120, 100, 30, 14, 'bold');
-                if(state.fields.length > 0) addElement('field', state.fields[0], 40, 150, 300, 30, 14, 'normal', '#f9f9f9', '1px solid #ccc');
             }
         };
 
@@ -330,6 +376,7 @@
         // --- 4. Element CRUD ---
         document.getElementById('addTextBtn').onclick = () => addElement('text', '文字', 20, 20);
         document.getElementById('addTitleBtn').onclick = () => addElement('title', '標題', 20, 20, 150, 40, 20, 'bold');
+        document.getElementById('addBoxBtn').onclick = () => addElement('text', '', 50, 50, 100, 100, 12, 'normal', 'transparent', '2px solid #333');
 
         function addElement(type, content, x, y, w=120, h=30, fs=14, fw='normal', bg='transparent', border='1px dashed #ccc') {
             const el = {
@@ -394,6 +441,7 @@
                     <option value="none" ${el.border==='none'?'selected':''}>無</option>
                     <option value="1px solid #000" ${el.border.includes('solid')?'selected':''}>實線</option>
                     <option value="1px dashed #000" ${el.border.includes('dashed')?'selected':''}>虛線</option>
+                    <option value="2px solid #000" ${el.border.includes('2px')?'selected':''}>粗框</option>
                 </select></div>
                 <button class="btn btn-danger btn-block" onclick="delEl('${el.id}')">刪除</button>
             `;
@@ -458,13 +506,12 @@
 
         function updateSplitLine() { els.splitLine.style.top = state.config.splitY + 'px'; }
 
-        // --- 6. PRINT ENGINE (The Heart) ---
+        // --- 6. PRINT ENGINE ---
         document.getElementById('printBtn').onclick = () => {
             const ctr = document.getElementById('print-container');
             ctr.innerHTML = '';
             if(!state.data.length) return alert('無數據');
 
-            // Apply page size styles to CSS
             const style = document.createElement('style');
             style.innerHTML = `@media print { @page { size: ${state.config.pageSize === 'custom' ? 'auto' : state.config.pageSize} ${state.config.orientation}; margin: 0; } }`;
             ctr.appendChild(style);
@@ -515,8 +562,6 @@
             const hEls = state.elements.filter(e => e.y < splitY);
             const dEls = state.elements.filter(e => e.y >= splitY);
             dEls.forEach(e => e._oy = e.y - splitY);
-
-            // Calculate pixels per mm for page break (approx 3.78 px/mm) but easier to use fixed logic
             const pageH = state.config.pageSize === 'receipt80' ? 99999 : 1050; 
 
             Object.values(groups).forEach(rows => {
@@ -530,19 +575,15 @@
                     if(y + rowHeight > pageH) {
                         pg = createPage(); ctr.appendChild(pg); renderH(); y = splitY;
                     }
-                    dEls.forEach(e => pg.appendChild(createEl(e, row, 0, y + e._oy - e.y))); // Math trick to offset correctly
+                    dEls.forEach(e => pg.appendChild(createEl(e, row, 0, y + e._oy - e.y)));
                     y += rowHeight;
                 });
             });
         }
 
-        // Mode 3: Grid / Labels (Poster)
+        // Mode 3: Grid
         function printGrid(ctr) {
             const { gridCols, gridRows, gridGapX, gridGapY } = state.config;
-            // Assuming the user designed ONE label starting at 0,0 or wherever.
-            // We need to calculate how much to shift.
-            
-            // Auto-detect cell size based on right-most and bottom-most element
             let maxX = 0, maxY = 0;
             state.elements.forEach(e => {
                 maxX = Math.max(maxX, e.x + e.width);
@@ -561,17 +602,13 @@
                     ctr.appendChild(pg);
                     idx = 0;
                 }
-                
-                // Calculate Grid Position
                 const col = idx % gridCols;
                 const r = Math.floor(idx / gridCols);
                 const offsetX = col * cellW;
                 const offsetY = r * cellH;
-
                 state.elements.forEach(el => {
                     pg.appendChild(createEl(el, row, offsetX, offsetY));
                 });
-                
                 idx++;
             });
         }
