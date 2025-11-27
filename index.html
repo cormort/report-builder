@@ -3,42 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Report Studio v5.6 - 快速標題版</title>
+    <title>Pro Report Studio v6.1 - 可解除綁定版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <style>
         :root { --primary: #2186c4; --bg: #f0f2f5; --surface: #ffffff; --border: #dcdfe6; --highlight: #e6f7ff; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); height: 100vh; display: flex; flex-direction: column; color: #333; }
-        .header { background: #2b3a42; color: white; padding: 0 20px; height: 60px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* Layout */
+        .header { background: #2b3a42; color: white; padding: 0 20px; height: 60px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .main-layout { display: flex; flex: 1; overflow: hidden; }
         .panel { background: var(--surface); display: flex; flex-direction: column; border-right: 1px solid var(--border); }
-        .left-panel { width: 280px; padding: 15px; overflow-y: auto; }
+        
+        .left-panel { width: 280px; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .tool-section { display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+        .tool-section:last-child { border-bottom: none; }
+        
         .center-panel { flex: 1; background: #525659; position: relative; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow: auto; }
         .right-panel { width: 320px; padding: 15px; overflow-y: auto; border-left: 1px solid var(--border); }
-        .panel-title { font-size: 14px; font-weight: bold; color: #666; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+        .panel-title { font-size: 14px; font-weight: bold; color: #666; margin-bottom: 5px; }
+        
+        /* UI Components */
         .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; background: #e0e0e0; display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: 0.2s; }
         .btn:hover { background: #d0d0d0; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-danger { background: #f56c6c; color: white; }
         .btn-success { background: #67c23a; color: white; }
-        .btn-block { width: 100%; margin-bottom: 5px; }
+        .btn-block { width: 100%; }
         .form-group { margin-bottom: 10px; }
         .form-label { font-size: 12px; color: #666; display: block; margin-bottom: 3px; }
         .form-control { width: 100%; padding: 5px; border: 1px solid var(--border); font-size: 13px; }
-        .upload-area { border: 2px dashed var(--border); padding: 15px; text-align: center; cursor: pointer; font-size: 13px; margin-bottom: 10px; color: #666; }
-        .field-item { padding: 5px 8px; background: #f4f4f5; border: 1px solid #e9e9eb; margin-bottom: 4px; cursor: grab; font-size: 12px; user-select: none; }
+        
+        .upload-area { border: 2px dashed var(--border); padding: 15px; text-align: center; cursor: pointer; font-size: 13px; color: #666; width: 100%; }
+        .field-item { padding: 6px 10px; background: #f4f4f5; border: 1px solid #e9e9eb; margin-bottom: 4px; cursor: grab; font-size: 12px; user-select: none; border-radius: 4px; }
         .field-item:hover { background: var(--highlight); border-color: var(--primary); }
-        .tag-item { display: inline-block; padding: 4px 8px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 12px; font-size: 12px; margin: 2px; cursor: grab; color: #2e7d32; }
-        .tag-item:hover { background: #c8e6c9; }
-        .canvas-wrapper { box-shadow: 0 0 20px rgba(0,0,0,0.5); margin: auto; transition: 0.3s; }
+        
+        .tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        .btn-tpl { padding: 8px; border: 1px solid #e0e0e0; background: white; cursor: pointer; font-size: 12px; text-align: center; border-radius: 4px; transition: 0.2s; color: #555; }
+        .btn-tpl:hover { border-color: var(--primary); color: var(--primary); background: #f0f9eb; font-weight: bold; }
+
+        .tag-container { display: flex; flex-wrap: wrap; gap: 5px; min-height: 30px; padding: 5px; border: 1px dashed #eee; border-radius: 4px; }
+        .tag-item { padding: 4px 8px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 12px; font-size: 12px; cursor: grab; color: #2e7d32; user-select: none; }
+        
+        /* Canvas */
+        .canvas-wrapper { box-shadow: 0 0 20px rgba(0,0,0,0.5); margin: auto; transition: 0.3s; flex-shrink: 0; }
         .canvas { background: white; position: relative; overflow: hidden; transform-origin: top center; background-image: linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px); background-size: 20px 20px; }
         .canvas-element { position: absolute; cursor: move; display: flex; align-items: center; overflow: hidden; border: 1px dashed #ccc; box-sizing: border-box; }
         .canvas-element.selected { border: 2px solid var(--primary); z-index: 100; background: rgba(33, 150, 243, 0.1); }
-        .canvas-element-value { pointer-events: none; width: 100%; padding: 2px; overflow: hidden; }
+        .canvas-element-value { pointer-events: none; width: 100%; padding: 2px; overflow: hidden; white-space: nowrap; }
         .resize-handle { position: absolute; bottom: 0; right: 0; width: 8px; height: 8px; background: var(--primary); cursor: nwse-resize; display: none; }
         .canvas-element.selected .resize-handle { display: block; }
         #splitLine { position: absolute; left: 0; width: 100%; height: 0; border-top: 2px dashed #f56c6c; z-index: 90; cursor: ns-resize; display: none; }
+        
         .table-element { display: block !important; overflow: visible !important; border: none !important; background: transparent !important; }
         .col-resizer:hover { opacity: 1 !important; background: var(--primary) !important; }
         .prop-col-item { transition: 0.2s; border: 1px solid transparent; }
@@ -48,6 +65,7 @@
         .context-menu div:hover { background: #f5f5f5; color: var(--primary); }
         .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; }
         .modal { background: white; padding: 20px; border-radius: 8px; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        
         #print-container { display: none; }
         @media print {
             @page { margin: 0; }
@@ -57,44 +75,74 @@
             .print-page { position: relative; margin: 0 auto; background: white; page-break-after: always; break-after: page; overflow: hidden; }
             .print-element { position: absolute; display: flex; align-items: center; padding: 2px; box-sizing: border-box; }
             .print-page { background-image: none !important; }
+            
+            /* Auto-Height Fixes for Print */
+            .print-table-row { display: flex; }
+            .print-table-cell { 
+                word-break: break-word; 
+                white-space: pre-wrap; 
+                overflow: visible; 
+                height: auto !important; 
+                min-height: 30px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <div style="font-weight: bold;">📊 Pro Report Studio v5.6</div>
+        <div style="font-weight: bold;">📊 Pro Report Studio v6.1</div>
         <div><button class="btn btn-success" id="printBtn">🖨️ 列印 / 匯出</button></div>
     </div>
 
     <div class="main-layout">
         <div class="panel left-panel">
-            <div class="panel-title">1. 檔案</div>
-            <div class="upload-area" id="dataBtn">📂 上傳 CSV 數據<input type="file" id="dataFile" hidden accept=".csv,.json"></div>
-            <div id="fileInfo" style="font-size:12px; color:#67c23a; margin-bottom:10px;"></div>
-            <div class="upload-area" id="pdfBtn" style="color:#2186c4; border-color:#2186c4">📄 匯入 PDF 底圖<input type="file" id="pdfFile" hidden accept=".pdf"></div>
-            
-            <div class="panel-title">2. 插入物件</div>
-            <button class="btn btn-block" onclick="openTableModal('smart')">📊 智能表格 (整塊)</button>
-            <button class="btn btn-block" onclick="openTableModal('virtual')">📋 虛擬表格 (單格)</button>
-            <div style="margin-top:5px; display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
-                <button class="btn" onclick="addElement('text','文字',20,20)">A 文字</button>
-                <button class="btn" onclick="addElement('title','標題',20,20,150,40,20,'bold')">H 標題</button>
-            </div>
-            
-            <div class="panel-title" style="margin-top:10px">3. 形狀工具</div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px;">
-                <button class="btn" onclick="addElement('text','',50,50,100,50,12,'normal','transparent','2px solid #333')" title="矩形">⬜</button>
-                <button class="btn" onclick="addElement('text','',50,50,200,2,12,'normal','#000','none')" title="橫線">━</button>
-                <button class="btn" onclick="addElement('text','',50,50,2,100,12,'normal','#000','none')" title="直線">┃</button>
+            <div class="tool-section">
+                <div class="panel-title">1. 檔案</div>
+                <div class="upload-area" id="dataBtn">📂 上傳 CSV 數據<input type="file" id="dataFile" hidden accept=".csv,.json"></div>
+                <div id="fileInfo" style="font-size:12px; color:#67c23a;"></div>
+                <div class="upload-area" id="pdfBtn" style="color:#2186c4; border-color:#2186c4">📄 匯入 PDF 底圖<input type="file" id="pdfFile" hidden accept=".pdf"></div>
             </div>
 
-            <div class="panel-title" style="margin-top:10px">4. 快速標題 (貼上文字)</div>
-            <textarea id="quickTextInput" class="form-control" rows="2" placeholder="貼上: 品名 規格 數量 單價"></textarea>
-            <button class="btn btn-block" style="margin-top:5px" onclick="parseQuickText()">✂️ 切分並產生標籤</button>
-            <div id="quickTextList" style="margin-top:5px; min-height:30px; border:1px dashed #eee; padding:5px;"></div>
+            <div class="tool-section">
+                <div class="panel-title">2. 快速模版</div>
+                <div class="tpl-grid">
+                    <div class="btn-tpl" onclick="tpl('tw_b2b')">🇹🇼 三聯式發票</div>
+                    <div class="btn-tpl" onclick="tpl('tw_einvoice')">🧾 電子發票</div>
+                    <div class="btn-tpl" onclick="tpl('labels')">🏷️ 標籤貼紙</div>
+                    <div class="btn-tpl" onclick="tpl('table')">📑 通用報表</div>
+                </div>
+            </div>
+            
+            <div class="tool-section">
+                <div class="panel-title">3. 插入物件</div>
+                <button class="btn btn-block" onclick="openTableModal('smart')">📊 智能表格 (整塊)</button>
+                <button class="btn btn-block" onclick="openTableModal('virtual')">📋 虛擬表格 (單格)</button>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+                    <button class="btn" onclick="addElement('text','文字',20,20)">A 文字</button>
+                    <button class="btn" onclick="addElement('title','標題',20,20,150,40,20,'bold')">H 標題</button>
+                </div>
+            </div>
+            
+            <div class="tool-section">
+                <div class="panel-title">4. 形狀工具</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px;">
+                    <button class="btn" onclick="addElement('text','',50,50,100,50,12,'normal','transparent','2px solid #333')" title="矩形">⬜</button>
+                    <button class="btn" onclick="addElement('text','',50,50,200,2,12,'normal','#000','none')" title="橫線">━</button>
+                    <button class="btn" onclick="addElement('text','',50,50,2,100,12,'normal','#000','none')" title="直線">┃</button>
+                </div>
+            </div>
 
-            <div class="panel-title" style="margin-top:10px">5. 欄位 (可拖曳)</div>
-            <div id="fieldList" style="min-height:100px;"></div>
+            <div class="tool-section">
+                <div class="panel-title">5. 快速標題 (貼上文字)</div>
+                <textarea id="quickTextInput" class="form-control" rows="2" placeholder="貼上: 品名 規格 數量 單價"></textarea>
+                <button class="btn btn-block" onclick="parseQuickText()">✂️ 切分並產生標籤</button>
+                <div id="quickTextList" class="tag-container"></div>
+            </div>
+
+            <div class="tool-section" style="flex: 1; min-height: 150px;">
+                <div class="panel-title">6. 欄位 (可拖曳)</div>
+                <div id="fieldList" style="display: flex; flex-direction: column; gap: 5px;"></div>
+            </div>
         </div>
 
         <div class="panel center-panel">
@@ -132,7 +180,7 @@
             <div id="grpSet" style="display:none; background:#f0f9eb; padding:10px; border-radius:4px;">
                 <div class="form-group"><label class="form-label">分組欄位</label><select id="grpField" class="form-control"></select></div>
                 <div class="form-group"><label class="form-label">分隔線 Y</label><input type="number" id="splitY" class="form-control" value="150"></div>
-                <div class="form-group"><label class="form-label">行高</label><input type="number" id="rowH" class="form-control" value="30"></div>
+                <div class="form-group"><label class="form-label">行高 (預覽用)</label><input type="number" id="rowH" class="form-control" value="30"></div>
             </div>
             
             <div id="gridSet" style="display:none; background:#ecf5ff; padding:10px; border-radius:4px;">
@@ -170,11 +218,11 @@
             el('canvas').style.minHeight = state.config.size === 'receipt80' ? '150mm' : '0';
         }
 
-        // --- Quick Text Logic (NEW) ---
+        // --- Quick Text Logic ---
         function parseQuickText() {
             const txt = el('quickTextInput').value;
             if(!txt.trim()) return;
-            const items = txt.split(/[\s,]+/).filter(t => t.trim()); // Split by space, tab, comma
+            const items = txt.split(/[\s,]+/).filter(t => t.trim());
             el('quickTextList').innerHTML = items.map(t => 
                 `<div class="tag-item" draggable="true" ondragstart="dragQuickText(event, '${t}')">${t}</div>`
             ).join('');
@@ -271,7 +319,7 @@
             document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
         }
 
-        // === Table Props (With Drop Zones) ===
+        // === Table Props (With Drop Zones & Remove Button) ===
         function renderTableProps(t) {
             const totalW = t.columnWidths.reduce((a, b) => a + b, 0);
             el('props').innerHTML = `
@@ -291,8 +339,9 @@
                                 <input type="number" value="${t.columnWidths[i]}" style="width:50px" oninput="updColW('${t.id}',${i},+this.value)">
                                 <select onchange="updColA('${t.id}',${i},this.value)"><option value="left" ${t.columnAligns[i]=='left'?'selected':''}>左</option><option value="center" ${t.columnAligns[i]=='center'?'selected':''}>中</option><option value="right" ${t.columnAligns[i]=='right'?'selected':''}>右</option></select>
                             </div>
-                            <div style="font-size:12px;color:#2186c4;border:1px dashed #ccc;padding:2px;background:white;">
-                                🔗 ${t.fields[i] || '未綁定'}
+                            <div style="font-size:12px;color:#2186c4;border:1px dashed #ccc;padding:2px;background:white;display:flex;justify-content:space-between;align-items:center;">
+                                <span>🔗 ${t.fields[i] || '未綁定'}</span>
+                                ${t.fields[i] ? `<span onclick="removeTableField('${t.id}', ${i})" style="cursor:pointer;color:#f56c6c;font-weight:bold;" title="解除綁定">❌</span>` : ''}
                             </div>
                         </div>`).join('')}
                     <button class="btn btn-danger btn-block" onclick="delEl('${t.id}')">刪除表格</button>
@@ -314,6 +363,17 @@
         window.updColA = (id, i, v) => { const t = state.elements.find(e => e.id === id); if(t) { t.columnAligns[i] = v; el(id).remove(); renderTableElementAdvanced(t); } };
         window.updateTableField = (id, i, f) => { const t = state.elements.find(e => e.id === id); if(t) { t.fields[i] = f; el(id).remove(); renderTableElementAdvanced(t); renderTableProps(t); } };
         window.updateTableColumnName = (id, i, n) => { const t = state.elements.find(e => e.id === id); if(t) { t.columns[i] = n; el(id).remove(); renderTableElementAdvanced(t); renderTableProps(t); } };
+        
+        // ★★★ Remove Field Function ★★★
+        window.removeTableField = (id, i) => {
+            const t = state.elements.find(e => e.id === id);
+            if(t) {
+                t.fields[i] = ''; // Clear field
+                el(id).remove();
+                renderTableElementAdvanced(t);
+                renderTableProps(t);
+            }
+        };
 
         // === Context Menu ===
         function showTableCtxMenu(e, t) {
@@ -380,8 +440,13 @@
             el('canvas').appendChild(d);
         }
         function drag(e, item, d, mode) {
-            const sx=e.clientX, sy=e.clientY, sv=mode==='move'?{x:item.x,y:item.y}:{w:item.width,h:item.height};
-            const mv=(ev)=>{ if(mode==='move'){item.x=sv.x+(ev.clientX-sx);item.y=sv.y+(ev.clientY-sy);} else{item.width=Math.max(5,sv.w+(ev.clientX-sx));item.height=Math.max(5,sv.h+(ev.clientY-sy));renderProps(item);} updEl(d,item); };
+            const sx=e.clientX, sy=e.clientY;
+            const sv = mode === 'move' ? { x: Number(item.x), y: Number(item.y) } : { w: Number(item.width), h: Number(item.height) };
+            const mv=(ev)=>{ 
+                if(mode==='move'){ item.x = sv.x + (ev.clientX - sx); item.y = sv.y + (ev.clientY - sy); } 
+                else { item.width = Math.max(5, sv.w + (ev.clientX - sx)); item.height = Math.max(5, sv.h + (ev.clientY - sy)); renderProps(item); } 
+                updEl(d,item); 
+            };
             const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
             document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
         }
@@ -391,7 +456,11 @@
             if (i.type === 'table') return renderTableProps(i);
             el('props').innerHTML = `
                 <div class="form-group"><label>內容</label><input class="form-control" value="${i.content}" oninput="setProp('${i.id}','content',this.value)"></div>
-                <div class="form-group"><label>字體大小</label><input type="number" class="form-control" value="${i.fontSize}" oninput="setProp('${i.id}','fontSize',this.value)"></div>
+                <div style="display:flex; gap:5px;">
+                    <div class="form-group" style="flex:1"><label>寬</label><input type="number" class="form-control" value="${i.width}" oninput="setProp('${i.id}','width',+this.value)"></div>
+                    <div class="form-group" style="flex:1"><label>高</label><input type="number" class="form-control" value="${i.height}" oninput="setProp('${i.id}','height',+this.value)"></div>
+                </div>
+                <div class="form-group"><label>字體大小</label><input type="number" class="form-control" value="${i.fontSize}" oninput="setProp('${i.id}','fontSize',+this.value)"></div>
                 <div class="form-group"><label>背景色</label><input type="color" style="width:100%" value="${i.backgroundColor==='transparent'?'#ffffff':i.backgroundColor}" oninput="setProp('${i.id}','backgroundColor',this.value)"></div>
                 <div class="form-group"><label>邊框</label><select class="form-control" onchange="setProp('${i.id}','border',this.value)"><option value="none">無</option><option value="1px solid #000">實線</option><option value="1px dashed #000">虛線</option></select></div>
                 <button class="btn btn-danger btn-block" onclick="delEl('${i.id}')">刪除</button>`;
@@ -400,7 +469,7 @@
         window.delEl = (id) => { state.elements = state.elements.filter(x => x.id !== id); el(id).remove(); el('props').innerHTML = ''; };
 
         // --- PDF & File ---
-        el('pdfBtn').onclick = () => el('pdfFile').click();
+        el('pdfBtn').onclick = () => { el('pdfFile').value = ''; el('pdfFile').click(); };
         el('pdfFile').onchange = async (e) => {
             const f = e.target.files[0]; if (!f) return;
             if(!confirm('匯入 PDF 為底圖？')) return;
@@ -476,7 +545,8 @@
         
         // Smart Table Printing
         function mkTblRow(t, rec, y, isH) {
-            const r = document.createElement('div'); r.style.cssText = `position:absolute; left:${t.x}px; top:${y}px; display:flex; height:${isH ? t.headerHeight : t.rowHeight}px;`;
+            const r = document.createElement('div'); r.className = 'print-table-row';
+            r.style.cssText = `position:absolute; left:${t.x}px; top:${y}px; display:flex; width:${t.columnWidths.reduce((a,b)=>a+b,0)}px;`;
             const merges = t.mergedCells?.filter(m => m.row === (isH ? 0 : 1)) || [];
             const skip = new Set();
             (isH ? t.columns : t.fields).forEach((val, i) => {
@@ -484,8 +554,8 @@
                 const m = merges.find(m => m.col === i);
                 let w = t.columnWidths[i], cs = 1;
                 if (m) { cs = m.colspan; w = 0; for (let k = i; k < i + cs && k < t.columnWidths.length; k++) { w += t.columnWidths[k]; if(k>i) skip.add(k); } }
-                const d = document.createElement('div');
-                d.style.cssText = `width:${w}px; border:${isH?t.headerBorder:t.cellBorder}; background:${isH?t.headerBg:'transparent'}; padding:5px; font-size:${t.fontSize}px; font-weight:${isH?t.headerFontWeight:'normal'}; display:flex; align-items:center; justify-content:${t.columnAligns[i]}; box-sizing:border-box;`;
+                const d = document.createElement('div'); d.className = 'print-table-cell';
+                d.style.cssText = `width:${w}px; border:${isH?t.headerBorder:t.cellBorder}; background:${isH?t.headerBg:'transparent'}; padding:5px; font-size:${t.fontSize}px; font-weight:${isH?t.headerFontWeight:'normal'}; display:flex; align-items:center; justify-content:${t.columnAligns[i]}; box-sizing:border-box; word-break:break-word; white-space:pre-wrap; min-height:${isH?t.headerHeight:t.rowHeight}px;`;
                 d.innerText = isH ? val : (rec[val] || '');
                 r.appendChild(d);
             });
@@ -497,16 +567,16 @@
             const g = {}, kf = state.config.grpF; state.data.forEach(r => { const k = kf ? r[kf] : 'A'; if (!g[k]) g[k] = []; g[k].push(r); });
             const pH = state.config.size === 'receipt80' ? 99999 : 1050;
             Object.values(g).forEach(rs => {
-                let p = mkPg(), cy = 0;
+                let p = mkPg(); c.appendChild(p); let cy = 0;
                 rs.forEach((r, idx) => {
                     state.elements.filter(e => e.type === 'table').forEach(t => {
-                        if (idx === 0) { p.appendChild(mkTblRow(t, null, t.y, true)); cy = t.y + t.headerHeight; }
-                        p.appendChild(mkTblRow(t, r, cy, false)); cy += t.rowHeight;
-                        if (cy > pH) { c.appendChild(p); p = mkPg(); p.appendChild(mkTblRow(t, null, t.y, true)); cy = t.y + t.headerHeight; }
+                        if (idx === 0) { const h = mkTblRow(t, null, t.y, true); p.appendChild(h); cy = t.y + h.offsetHeight; }
+                        const d = mkTblRow(t, r, cy, false); p.appendChild(d); const rh = d.offsetHeight;
+                        if (cy + rh > pH) { d.remove(); p = mkPg(); c.appendChild(p); const h = mkTblRow(t, null, t.y, true); p.appendChild(h); cy = t.y + h.offsetHeight; d.style.top = cy + 'px'; p.appendChild(d); }
+                        cy += rh;
                     });
                     state.elements.filter(e => e.type !== 'table').forEach(e => { if(idx===0) p.appendChild(mkEl(e, r)); });
                 });
-                c.appendChild(p);
             });
         }
         function pGWithGrid(c) {
