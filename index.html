@@ -3,69 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Report Studio v6.1 - 可解除綁定版</title>
+    <title>Pro Report Studio v6.9 - 拖曳修復版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Material+Symbols+Outlined" rel="stylesheet">
     <style>
-        :root { --primary: #2186c4; --bg: #f0f2f5; --surface: #ffffff; --border: #dcdfe6; --highlight: #e6f7ff; }
+        :root {
+            --primary: #6366f1; --primary-light: #818cf8; --bg: #0f172a; --surface: #1e293b; --surface2: #334155;
+            --border: #475569; --text: #e2e8f0; --text-secondary: #94a3b8; --success: #10b981; --danger: #ef4444;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); height: 100vh; display: flex; flex-direction: column; color: #333; }
-        
-        /* Layout */
-        .header { background: #2b3a42; color: white; padding: 0 20px; height: 60px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
-        .main-layout { display: flex; flex: 1; overflow: hidden; }
-        .panel { background: var(--surface); display: flex; flex-direction: column; border-right: 1px solid var(--border); }
-        
-        .left-panel { width: 280px; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-        .tool-section { display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-        .tool-section:last-child { border-bottom: none; }
-        
-        .center-panel { flex: 1; background: #525659; position: relative; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow: auto; }
-        .right-panel { width: 320px; padding: 15px; overflow-y: auto; border-left: 1px solid var(--border); }
-        .panel-title { font-size: 14px; font-weight: bold; color: #666; margin-bottom: 5px; }
-        
-        /* UI Components */
-        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; background: #e0e0e0; display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: 0.2s; }
-        .btn:hover { background: #d0d0d0; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-danger { background: #f56c6c; color: white; }
-        .btn-success { background: #67c23a; color: white; }
-        .btn-block { width: 100%; }
-        .form-group { margin-bottom: 10px; }
-        .form-label { font-size: 12px; color: #666; display: block; margin-bottom: 3px; }
-        .form-control { width: 100%; padding: 5px; border: 1px solid var(--border); font-size: 13px; }
-        
-        .upload-area { border: 2px dashed var(--border); padding: 15px; text-align: center; cursor: pointer; font-size: 13px; color: #666; width: 100%; }
-        .field-item { padding: 6px 10px; background: #f4f4f5; border: 1px solid #e9e9eb; margin-bottom: 4px; cursor: grab; font-size: 12px; user-select: none; border-radius: 4px; }
-        .field-item:hover { background: var(--highlight); border-color: var(--primary); }
-        
-        .tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-        .btn-tpl { padding: 8px; border: 1px solid #e0e0e0; background: white; cursor: pointer; font-size: 12px; text-align: center; border-radius: 4px; transition: 0.2s; color: #555; }
-        .btn-tpl:hover { border-color: var(--primary); color: var(--primary); background: #f0f9eb; font-weight: bold; }
+        body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .material-symbols-outlined { font-size: 20px; vertical-align: middle; }
 
-        .tag-container { display: flex; flex-wrap: wrap; gap: 5px; min-height: 30px; padding: 5px; border: 1px dashed #eee; border-radius: 4px; }
-        .tag-item { padding: 4px 8px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 12px; font-size: 12px; cursor: grab; color: #2e7d32; user-select: none; }
-        
+        /* Header */
+        .header { height: 56px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 20px; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .header .title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .header .actions { margin-left: auto; }
+
+        /* Layout */
+        .main-layout { flex: 1; display: flex; overflow: hidden; }
+        .left-panel { width: 280px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .tab-nav { display: flex; background: var(--surface2); border-bottom: 1px solid var(--border); }
+        .tab-btn { flex: 1; padding: 14px 8px; text-align: center; cursor: pointer; color: var(--text-secondary); transition: 0.2s; font-size: 13px; }
+        .tab-btn.active, .tab-btn:hover { color: white; background: rgba(99,102,241,0.2); border-bottom: 2px solid var(--primary); }
+        .tab-content { flex: 1; overflow-y: auto; padding: 16px; display: none; }
+        .tab-content.active { display: block; }
+
+        /* Components */
+        .btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; background: var(--surface2); color: var(--text); }
+        .btn:hover { background: #475569; transform: translateY(-1px); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-block { width: 100%; }
+        .form-group { margin-bottom: 14px; }
+        .form-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; display: block; }
+        .form-control { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface2); color: var(--text); font-size: 13px; }
+        .upload-area { border: 2px dashed var(--border); padding: 20px; text-align: center; border-radius: 12px; cursor: pointer; background: var(--surface2); }
+        .field-item { padding: 10px 12px; background: var(--surface2); border-radius: 8px; margin-bottom: 8px; cursor: grab; display: flex; align-items: center; gap: 8px; font-size: 13px; border: 1px solid transparent; }
+        .field-item:hover { background: rgba(99,102,241,0.2); border-color: var(--primary); }
+
         /* Canvas */
-        .canvas-wrapper { box-shadow: 0 0 20px rgba(0,0,0,0.5); margin: auto; transition: 0.3s; flex-shrink: 0; }
-        .canvas { background: white; position: relative; overflow: hidden; transform-origin: top center; background-image: linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px); background-size: 20px 20px; }
-        .canvas-element { position: absolute; cursor: move; display: flex; align-items: center; overflow: hidden; border: 1px dashed #ccc; box-sizing: border-box; }
-        .canvas-element.selected { border: 2px solid var(--primary); z-index: 100; background: rgba(33, 150, 243, 0.1); }
-        .canvas-element-value { pointer-events: none; width: 100%; padding: 2px; overflow: hidden; white-space: nowrap; }
-        .resize-handle { position: absolute; bottom: 0; right: 0; width: 8px; height: 8px; background: var(--primary); cursor: nwse-resize; display: none; }
-        .canvas-element.selected .resize-handle { display: block; }
-        #splitLine { position: absolute; left: 0; width: 100%; height: 0; border-top: 2px dashed #f56c6c; z-index: 90; cursor: ns-resize; display: none; }
+        .center-panel { flex: 1; background: #1e293b; position: relative; display: flex; flex-direction: column; overflow: hidden; }
+        .canvas-wrapper { flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px; overflow: auto; }
+        .canvas { background: white; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.6); border-radius: 4px; overflow: hidden; transform-origin: top center; background-image: linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px); background-size: 20px 20px; }
         
+        .canvas-element { position: absolute; border: 1px dashed #94a3b8; background: rgba(99,102,241,0.05); border-radius: 4px; cursor: move; display: flex; align-items: center; box-sizing: border-box; color: #333; user-select: none; }
+        .canvas-element.selected { border: 2px solid var(--primary); background: rgba(99,102,241,0.15); z-index: 100; }
+        .canvas-element-value { pointer-events: none; width: 100%; padding: 2px; overflow: hidden; white-space: nowrap; }
+        .resize-handle { position: absolute; bottom: -4px; right: -4px; width: 12px; height: 12px; background: var(--primary); border: 2px solid white; border-radius: 50%; cursor: nwse-resize; opacity: 0; }
+        .canvas-element.selected .resize-handle { opacity: 1; }
+
+        /* Right Panel */
+        .right-panel { width: 320px; background: var(--surface); border-left: 1px solid var(--border); padding: 16px; overflow-y: auto; }
+        .panel-title { font-size: 14px; font-weight: 700; color: var(--primary-light); margin: 20px 0 12px 0; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+        /* Floating Toolbar */
+        .floating-toolbar { position: absolute; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px; display: none; gap: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); z-index: 1000; }
+        .floating-toolbar.show { display: flex; }
+
+        /* Split Line */
+        #splitLine { position: absolute; left: 0; width: 100%; border-top: 3px dashed #ef4444; z-index: 90; cursor: ns-resize; opacity: 0.8; display: none; }
+        #splitLine::after { content: "分組分隔線"; position: absolute; top: -10px; right: 0; background: var(--danger); color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+
+        /* Table & Props */
         .table-element { display: block !important; overflow: visible !important; border: none !important; background: transparent !important; }
         .col-resizer:hover { opacity: 1 !important; background: var(--primary) !important; }
-        .prop-col-item { transition: 0.2s; border: 1px solid transparent; }
-        .prop-col-item.drag-over { border-color: var(--primary); background: #e6f7ff; }
-        .context-menu { position: fixed; background: white; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 12px rgba(0,0,0,0.2); z-index: 9999; min-width: 150px; overflow: hidden; }
-        .context-menu div { padding: 8px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f0f0f0; color: #333; }
-        .context-menu div:hover { background: #f5f5f5; color: var(--primary); }
-        .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; }
-        .modal { background: white; padding: 20px; border-radius: 8px; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        
+        .prop-col-item { transition: 0.2s; border: 1px solid var(--border); background: var(--surface2); color: var(--text); }
+        .prop-col-item.drag-over { border-color: var(--primary); background: rgba(99,102,241,0.2); }
+        .context-menu { position: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 9999; min-width: 160px; }
+        .context-menu div { padding: 10px 16px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border); color: var(--text); }
+        .context-menu div:hover { background: var(--primary); color: white; }
+        .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 200; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+        .modal { background: var(--surface); padding: 24px; border-radius: 16px; width: 360px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid var(--border); }
+        .tag-item { padding: 6px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 16px; font-size: 12px; cursor: grab; color: var(--primary-light); display: inline-block; margin: 2px; }
+
+        /* Print */
         #print-container { display: none; }
         @media print {
             @page { margin: 0; }
@@ -73,119 +88,135 @@
             #print-container { display: block !important; position: absolute; left: 0; top: 0; width: 100%; visibility: visible; }
             #print-container * { visibility: visible; }
             .print-page { position: relative; margin: 0 auto; background: white; page-break-after: always; break-after: page; overflow: hidden; }
-            .print-element { position: absolute; display: flex; align-items: center; padding: 2px; box-sizing: border-box; }
+            .print-element { position: absolute; display: flex; align-items: center; padding: 2px; box-sizing: border-box; color: black; }
             .print-page { background-image: none !important; }
-            
-            /* Auto-Height Fixes for Print */
-            .print-table-row { display: flex; }
-            .print-table-cell { 
-                word-break: break-word; 
-                white-space: pre-wrap; 
-                overflow: visible; 
-                height: auto !important; 
-                min-height: 30px;
-            }
+            .print-table-row { position: relative !important; left: auto !important; top: auto !important; display: flex; }
+            .print-table-cell { word-break: break-word; white-space: pre-wrap; overflow: visible; height: auto !important; min-height: 30px; color: black; }
+            .print-table-wrapper { position: absolute; display: flex; flex-direction: column; }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <div style="font-weight: bold;">📊 Pro Report Studio v6.1</div>
-        <div><button class="btn btn-success" id="printBtn">🖨️ 列印 / 匯出</button></div>
+        <div class="title">
+            <span class="material-symbols-outlined" style="font-size:28px;color:var(--primary)">auto_fix_high</span>
+            Pro Report Studio <small style="opacity:0.7;margin-left:8px;font-weight:400;font-size:12px">v6.9 拖曳修復版</small>
+        </div>
+        <div class="actions">
+            <button class="btn btn-success" id="printBtn">
+                <span class="material-symbols-outlined">print</span> 列印 / 匯出 PDF
+            </button>
+        </div>
     </div>
 
     <div class="main-layout">
-        <div class="panel left-panel">
-            <div class="tool-section">
-                <div class="panel-title">1. 檔案</div>
-                <div class="upload-area" id="dataBtn">📂 上傳 CSV 數據<input type="file" id="dataFile" hidden accept=".csv,.json"></div>
-                <div id="fileInfo" style="font-size:12px; color:#67c23a;"></div>
-                <div class="upload-area" id="pdfBtn" style="color:#2186c4; border-color:#2186c4">📄 匯入 PDF 底圖<input type="file" id="pdfFile" hidden accept=".pdf"></div>
+        <div class="left-panel">
+            <div class="tab-nav">
+                <div class="tab-btn active" data-tab="tab1"><span class="material-symbols-outlined">dataset</span><div>資料</div></div>
+                <div class="tab-btn" data-tab="tab2"><span class="material-symbols-outlined">widgets</span><div>元件</div></div>
+                <div class="tab-btn" data-tab="tab3"><span class="material-symbols-outlined">bolt</span><div>快速</div></div>
             </div>
 
-            <div class="tool-section">
-                <div class="panel-title">2. 快速模版</div>
-                <div class="tpl-grid">
-                    <div class="btn-tpl" onclick="tpl('tw_b2b')">🇹🇼 三聯式發票</div>
-                    <div class="btn-tpl" onclick="tpl('tw_einvoice')">🧾 電子發票</div>
-                    <div class="btn-tpl" onclick="tpl('labels')">🏷️ 標籤貼紙</div>
-                    <div class="btn-tpl" onclick="tpl('table')">📑 通用報表</div>
+            <div id="tab1" class="tab-content active">
+                <div class="form-group">
+                    <div class="upload-area" id="dataBtn">
+                        <span class="material-symbols-outlined" style="font-size:36px;color:#10b981">upload_file</span>
+                        <div style="margin-top:8px">上傳 CSV / JSON</div>
+                        <input type="file" id="dataFile" hidden accept=".csv,.json">
+                    </div>
+                    <div id="fileInfo" style="margin-top:8px; color:#10b981; font-weight:500; font-size:12px; text-align:center;"></div>
                 </div>
-            </div>
-            
-            <div class="tool-section">
-                <div class="panel-title">3. 插入物件</div>
-                <button class="btn btn-block" onclick="openTableModal('smart')">📊 智能表格 (整塊)</button>
-                <button class="btn btn-block" onclick="openTableModal('virtual')">📋 虛擬表格 (單格)</button>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
-                    <button class="btn" onclick="addElement('text','文字',20,20)">A 文字</button>
-                    <button class="btn" onclick="addElement('title','標題',20,20,150,40,20,'bold')">H 標題</button>
+                <div class="form-group">
+                    <div class="upload-area" id="pdfBtn">
+                        <span class="material-symbols-outlined" style="font-size:36px;color:var(--primary)">picture_as_pdf</span>
+                        <div style="margin-top:8px">匯入 PDF 底圖</div>
+                        <input type="file" id="pdfFile" hidden accept=".pdf">
+                    </div>
                 </div>
-            </div>
-            
-            <div class="tool-section">
-                <div class="panel-title">4. 形狀工具</div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px;">
-                    <button class="btn" onclick="addElement('text','',50,50,100,50,12,'normal','transparent','2px solid #333')" title="矩形">⬜</button>
-                    <button class="btn" onclick="addElement('text','',50,50,200,2,12,'normal','#000','none')" title="橫線">━</button>
-                    <button class="btn" onclick="addElement('text','',50,50,2,100,12,'normal','#000','none')" title="直線">┃</button>
+                <div style="margin-top:20px">
+                    <div style="font-weight:600; margin-bottom:12px; color:var(--primary-light); font-size:13px;">欄位列表 (可拖曳)</div>
+                    <div id="fieldList"></div>
                 </div>
             </div>
 
-            <div class="tool-section">
-                <div class="panel-title">5. 快速標題 (貼上文字)</div>
-                <textarea id="quickTextInput" class="form-control" rows="2" placeholder="貼上: 品名 規格 數量 單價"></textarea>
-                <button class="btn btn-block" onclick="parseQuickText()">✂️ 切分並產生標籤</button>
-                <div id="quickTextList" class="tag-container"></div>
+            <div id="tab2" class="tab-content">
+                <button class="btn btn-primary btn-block" style="margin-bottom:12px" onclick="openTableModal('smart')">
+                    <span class="material-symbols-outlined">table_view</span> 插入智能表格
+                </button>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <button class="btn" onclick="addElement('text','文字')"><span class="material-symbols-outlined">text_fields</span> 文字</button>
+                    <button class="btn" onclick="addElement('title','標題',null,null,null,null,24,'bold')"><span class="material-symbols-outlined">title</span> 標題</button>
+                    <button class="btn" onclick="addElement('text','',50,50,200,4,12,'normal','#000','none')"><span class="material-symbols-outlined">remove</span> 橫線</button>
+                    <button class="btn" onclick="addElement('text','',50,50,4,120,12,'normal','#000','none')"><span class="material-symbols-outlined">vertical_align_center</span> 直線</button>
+                    <button class="btn" onclick="addElement('text','',50,50,150,80,12,'normal','transparent','2px solid #333')"><span class="material-symbols-outlined">crop_square</span> 矩形</button>
+                    <button class="btn btn-danger" onclick="if(confirm('確定清空？')){state.elements=[];el('canvas').innerHTML='<div id=splitLine></div>';}"><span class="material-symbols-outlined">delete_sweep</span> 清空</button>
+                </div>
             </div>
 
-            <div class="tool-section" style="flex: 1; min-height: 150px;">
-                <div class="panel-title">6. 欄位 (可拖曳)</div>
-                <div id="fieldList" style="display: flex; flex-direction: column; gap: 5px;"></div>
+            <div id="tab3" class="tab-content">
+                <div class="form-group">
+                    <label class="form-label">快速標題 (貼上文字)</label>
+                    <textarea id="quickTextInput" class="form-control" rows="3" placeholder="貼上欄位：品名 規格 數量 單價 金額"></textarea>
+                </div>
+                <button class="btn btn-primary btn-block" style="margin-bottom:12px" onclick="parseQuickText()">
+                    <span class="material-symbols-outlined">content_cut</span> 切分並產生標籤
+                </button>
+                <div id="quickTextList" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
             </div>
         </div>
 
-        <div class="panel center-panel">
-            <div style="margin-bottom:10px;">
-                <button class="btn btn-danger" id="clearBgBtn" style="display:none">🗑️ 清除背景圖</button>
+        <div class="center-panel">
+            <div style="position:absolute; top:10px; right:10px; z-index:10;">
+                <button class="btn btn-danger btn-sm" id="clearBgBtn" style="display:none">🗑️ 清除背景</button>
             </div>
             <div class="canvas-wrapper">
                 <div class="canvas" id="canvas" style="width:210mm; height:297mm;">
-                    <div id="splitLine" style="top: 150px;"></div>
+                    <div id="splitLine" style="top:150px;"></div>
                 </div>
             </div>
-            
-            <div class="modal-overlay" id="tableModal">
-                <div class="modal">
-                    <h3 id="modalTitle" style="margin-bottom:15px">插入表格</h3>
-                    <div class="form-group"><label class="form-label">欄位數 (Cols)</label><input type="number" id="tblCols" class="form-control" value="3" min="1" max="10"></div>
-                    <div class="form-group"><label class="form-label">資料列數 (Rows)</label><input type="number" id="tblRows" class="form-control" value="2" min="1" max="20"></div>
-                    <div class="form-group" style="font-size:12px; color:#666"><input type="checkbox" id="autoFill" checked> 自動填入欄位變數</div>
-                    <div style="display:flex; gap:10px; margin-top:20px;">
-                        <button class="btn btn-block" onclick="closeTableModal()">取消</button>
-                        <button class="btn btn-primary btn-block" onclick="insertTable()">插入</button>
-                    </div>
-                </div>
+            <div class="floating-toolbar" id="floatBar">
+                <button class="btn btn-sm" onclick="duplicateSelected()" title="複製"><span class="material-symbols-outlined">content_copy</span></button>
+                <button class="btn btn-sm" onclick="delEl(state.selected.id)" title="刪除"><span class="material-symbols-outlined">delete</span></button>
+                <button class="btn btn-sm" onclick="bringToFront()" title="移至最前"><span class="material-symbols-outlined">flip_to_front</span></button>
+                <button class="btn btn-sm" onclick="sendToBack()" title="移至最後"><span class="material-symbols-outlined">flip_to_back</span></button>
             </div>
         </div>
 
-        <div class="panel right-panel">
-            <div class="panel-title">版面</div>
-            <div class="form-group"><select id="pageSize" class="form-control"><option value="a4">A4</option><option value="a5">A5</option><option value="receipt80">80mm</option><option value="custom">自訂</option></select></div>
-            <div class="form-group"><select id="orient" class="form-control"><option value="portrait">直向</option><option value="landscape">橫向</option></select></div>
+        <div class="right-panel">
+            <div class="panel-title">版面設定</div>
+            <div class="form-group">
+                <label class="form-label">紙張</label>
+                <select id="pageSize" class="form-control">
+                    <option value="a4">A4 (210×297mm)</option>
+                    <option value="a5">A5</option>
+                    <option value="receipt80">80mm 小票</option>
+                    <option value="custom">自訂</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">方向</label>
+                <select id="orient" class="form-control">
+                    <option value="portrait">直向</option>
+                    <option value="landscape">橫向</option>
+                </select>
+            </div>
+
+            <div class="panel-title">輸出模式</div>
+            <select id="mode" class="form-control" style="margin-bottom:12px">
+                <option value="single">單頁單筆</option>
+                <option value="group">分組列表</option>
+                <option value="grid">一頁多筆</option>
+            </select>
             
-            <div class="panel-title" style="margin-top:15px">模式</div>
-            <div class="form-group"><select id="mode" class="form-control"><option value="single">單頁單筆</option><option value="group">分組列表</option><option value="grid">一頁多張</option></select></div>
-            
-            <div id="grpSet" style="display:none; background:#f0f9eb; padding:10px; border-radius:4px;">
+            <div id="grpSet" style="display:none; background:rgba(16,185,129,0.1); padding:12px; border-radius:8px; border:1px solid var(--success);">
                 <div class="form-group"><label class="form-label">分組欄位</label><select id="grpField" class="form-control"></select></div>
                 <div class="form-group"><label class="form-label">分隔線 Y</label><input type="number" id="splitY" class="form-control" value="150"></div>
-                <div class="form-group"><label class="form-label">行高 (預覽用)</label><input type="number" id="rowH" class="form-control" value="30"></div>
+                <div class="form-group"><label class="form-label">行高 (預覽)</label><input type="number" id="rowH" class="form-control" value="30"></div>
             </div>
-            
-            <div id="gridSet" style="display:none; background:#ecf5ff; padding:10px; border-radius:4px;">
-                <button class="btn btn-primary btn-block" onclick="autoCalcGrid()">✨ 自動計算</button>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px">
+
+            <div id="gridSet" style="display:none; background:rgba(99,102,241,0.1); padding:12px; border-radius:8px; border:1px solid var(--primary);">
+                <button class="btn btn-primary btn-block" style="margin-bottom:10px" onclick="autoCalcGrid()">✨ 自動計算</button>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
                     <div><label class="form-label">欄</label><input type="number" id="gCols" class="form-control" value="2"></div>
                     <div><label class="form-label">列</label><input type="number" id="gRows" class="form-control" value="4"></div>
                     <div><label class="form-label">間距X</label><input type="number" id="gX" class="form-control" value="10"></div>
@@ -193,16 +224,44 @@
                 </div>
             </div>
 
-            <div class="panel-title" style="margin-top:20px">屬性</div>
-            <div id="props" style="text-align:center; color:#999; font-size:12px;">選擇元素</div>
+            <div id="props" style="margin-top:20px;">
+                <div style="padding:40px 0; opacity:0.5; text-align:center; color:var(--text-secondary);">
+                    <span class="material-symbols-outlined" style="font-size:48px;">gesture</span>
+                    <div style="margin-top:16px;">請在畫布上選擇一個元件</div>
+                </div>
+            </div>
         </div>
     </div>
+    
+    <div class="modal-overlay" id="tableModal">
+        <div class="modal">
+            <h3 id="modalTitle" style="margin-bottom:15px; font-size:18px; font-weight:700; color:var(--text)">插入表格</h3>
+            <div class="form-group"><label class="form-label">欄位數 (Cols)</label><input type="number" id="tblCols" class="form-control" value="3" min="1" max="10"></div>
+            <div class="form-group"><label class="form-label">資料列數 (Rows)</label><input type="number" id="tblRows" class="form-control" value="2" min="1" max="20"></div>
+            <div class="form-group" style="font-size:12px; color:var(--text-secondary)"><input type="checkbox" id="autoFill" checked> 自動填入欄位變數</div>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="btn btn-block" onclick="closeTableModal()">取消</button>
+                <button class="btn btn-primary btn-block" onclick="insertTable()">插入</button>
+            </div>
+        </div>
+    </div>
+
     <div id="print-container"></div>
 
     <script>
         const state = { fields: [], elements: [], data: [], selected: null, config: { size: 'a4', orient: 'portrait', w: 210, h: 297, mode: 'single', grpF: '', splitY: 150, rowH: 30, gC: 2, gR: 4, gX: 10, gY: 10 } };
         const el = (id) => document.getElementById(id);
         let currentTableMode = 'smart';
+
+        // Tab Logic
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+            };
+        });
 
         initCanvas(); initDrag();
 
@@ -272,7 +331,7 @@
             // Header
             html += `<div style="display:flex; height:${table.headerHeight}px;">`;
             table.columns.forEach((col, i) => {
-                html += `<div style="position:relative; width:${table.columnWidths[i]}px; background:${table.headerBg}; border:${table.headerBorder}; padding:5px; font-weight:${table.headerFontWeight}; font-size:${table.fontSize}px; text-align:${table.columnAligns[i]}; overflow:hidden; box-sizing:border-box;">${col}<div class="col-resizer" data-col="${i}" style="position:absolute; right:0; top:0; width:5px; height:100%; cursor:col-resize;"></div></div>`;
+                html += `<div style="position:relative; width:${table.columnWidths[i]}px; background:${table.headerBg}; border:${table.headerBorder}; padding:5px; font-weight:${table.headerFontWeight}; font-size:${table.fontSize}px; text-align:${table.columnAligns[i]}; overflow:hidden; box-sizing:border-box; color:#333;">${col}<div class="col-resizer" data-col="${i}" style="position:absolute; right:0; top:0; width:5px; height:100%; cursor:col-resize;"></div></div>`;
             });
             html += '</div>';
             // Data
@@ -288,7 +347,7 @@
             
             d.querySelectorAll('.col-resizer').forEach(r => {
                 r.onmousedown = (e) => {
-                    e.stopPropagation(); const ci = +r.dataset.col, sx = e.clientX, sw = table.columnWidths[ci];
+                    e.preventDefault(); e.stopPropagation(); const ci = +r.dataset.col, sx = e.clientX, sw = table.columnWidths[ci];
                     const mv = (ev) => { table.columnWidths[ci] = Math.max(20, sw + (ev.clientX - sx)); d.remove(); renderTableElementAdvanced(table); };
                     const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); renderTableProps(table); };
                     document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
@@ -307,45 +366,49 @@
                 });
             });
 
-            d.onmousedown = (e) => { if(e.target.classList.contains('col-resizer'))return; e.stopPropagation(); selEl(table); dragTable(e, table, d); };
+            d.onmousedown = (e) => { 
+                if(e.target.classList.contains('col-resizer'))return; 
+                e.preventDefault(); // ★★★ 關鍵修正：防止瀏覽器預設拖曳行為 ★★★
+                e.stopPropagation(); 
+                selEl(table); 
+                dragTable(e, table, d); 
+            };
             d.oncontextmenu = (e) => { e.preventDefault(); showTableCtxMenu(e, table); };
             el('canvas').appendChild(d);
         }
 
         function dragTable(e, table, d) {
             const sx = e.clientX, sy = e.clientY, stX = table.x, stY = table.y;
-            const mv = (ev) => { table.x = stX + (ev.clientX - sx); table.y = stY + (ev.clientY - sy); d.style.left = table.x + 'px'; d.style.top = table.y + 'px'; };
+            const mv = (ev) => { table.x = stX + (ev.clientX - sx); table.y = stY + (ev.clientY - sy); d.style.left = table.x + 'px'; d.style.top = table.y + 'px'; updateFloatBar(); };
             const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); };
             document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
         }
 
-        // === Table Props (With Drop Zones & Remove Button) ===
+        // === Table Props ===
         function renderTableProps(t) {
             const totalW = t.columnWidths.reduce((a, b) => a + b, 0);
             el('props').innerHTML = `
-                <div style="max-height:500px; overflow-y:auto; padding:5px;">
-                    <div class="panel-title">表格設定 (寬:${totalW}px)</div>
-                    <div class="form-group"><label>表頭高</label><input type="number" class="form-control" value="${t.headerHeight}" oninput="updTbl('${t.id}','headerHeight',+this.value)"></div>
-                    <div class="form-group"><label>列高</label><input type="number" class="form-control" value="${t.rowHeight}" oninput="updTbl('${t.id}','rowHeight',+this.value)"></div>
-                    <div class="form-group"><label>字體</label><input type="number" class="form-control" value="${t.fontSize}" oninput="updTbl('${t.id}','fontSize',+this.value)"></div>
-                    <div class="form-group"><label>背景</label><input type="color" class="form-control" value="${t.headerBg}" oninput="updTbl('${t.id}','headerBg',this.value)"></div>
-                    <div class="form-group"><label>邊框</label><select class="form-control" onchange="updTbl('${t.id}','cellBorder',this.value)"><option value="none">無</option><option value="1px solid #999">細線</option><option value="2px solid #333">粗線</option></select></div>
-                    <div class="panel-title">欄位微調 (可拖曳欄位/文字)</div>
-                    ${t.columns.map((c,i)=>`
-                        <div class="prop-col-item" style="background:#f5f5f5;padding:8px;margin-bottom:5px;border-radius:4px;" 
-                             ondragover="allowDrop(event, this)" ondragleave="leaveDrop(this)" ondrop="dropToProp(event, '${t.id}', ${i}, this)">
-                            <div style="font-weight:bold;margin-bottom:3px;">${i+1}. ${c}</div>
-                            <div style="display:flex;gap:2px;margin-bottom:3px;">
-                                <input type="number" value="${t.columnWidths[i]}" style="width:50px" oninput="updColW('${t.id}',${i},+this.value)">
-                                <select onchange="updColA('${t.id}',${i},this.value)"><option value="left" ${t.columnAligns[i]=='left'?'selected':''}>左</option><option value="center" ${t.columnAligns[i]=='center'?'selected':''}>中</option><option value="right" ${t.columnAligns[i]=='right'?'selected':''}>右</option></select>
-                            </div>
-                            <div style="font-size:12px;color:#2186c4;border:1px dashed #ccc;padding:2px;background:white;display:flex;justify-content:space-between;align-items:center;">
-                                <span>🔗 ${t.fields[i] || '未綁定'}</span>
-                                ${t.fields[i] ? `<span onclick="removeTableField('${t.id}', ${i})" style="cursor:pointer;color:#f56c6c;font-weight:bold;" title="解除綁定">❌</span>` : ''}
-                            </div>
-                        </div>`).join('')}
-                    <button class="btn btn-danger btn-block" onclick="delEl('${t.id}')">刪除表格</button>
-                </div>`;
+                <div class="panel-title">表格設定 (寬:${totalW}px)</div>
+                <div class="form-group"><label class="form-label">表頭高</label><input type="number" class="form-control" value="${t.headerHeight}" oninput="updTbl('${t.id}','headerHeight',+this.value)"></div>
+                <div class="form-group"><label class="form-label">列高</label><input type="number" class="form-control" value="${t.rowHeight}" oninput="updTbl('${t.id}','rowHeight',+this.value)"></div>
+                <div class="form-group"><label class="form-label">字體</label><input type="number" class="form-control" value="${t.fontSize}" oninput="updTbl('${t.id}','fontSize',+this.value)"></div>
+                <div class="form-group"><label class="form-label">背景</label><input type="color" class="form-control" style="height:40px" value="${t.headerBg}" oninput="updTbl('${t.id}','headerBg',this.value)"></div>
+                <div class="form-group"><label class="form-label">邊框</label><select class="form-control" onchange="updTbl('${t.id}','cellBorder',this.value)"><option value="none">無</option><option value="1px solid #999">細線</option><option value="2px solid #333">粗線</option></select></div>
+                <div class="panel-title">欄位微調</div>
+                ${t.columns.map((c,i)=>`
+                    <div class="prop-col-item" style="padding:8px;margin-bottom:5px;border-radius:4px;" 
+                            ondragover="allowDrop(event, this)" ondragleave="leaveDrop(this)" ondrop="dropToProp(event, '${t.id}', ${i}, this)">
+                        <div style="font-weight:bold;margin-bottom:3px;font-size:12px;">${i+1}. ${c}</div>
+                        <div style="display:flex;gap:4px;margin-bottom:4px;">
+                            <input type="number" value="${t.columnWidths[i]}" class="form-control" style="width:60px;padding:4px;" oninput="updColW('${t.id}',${i},+this.value)">
+                            <select class="form-control" style="padding:4px;" onchange="updColA('${t.id}',${i},this.value)"><option value="left" ${t.columnAligns[i]=='left'?'selected':''}>左</option><option value="center" ${t.columnAligns[i]=='center'?'selected':''}>中</option><option value="right" ${t.columnAligns[i]=='right'?'selected':''}>右</option></select>
+                        </div>
+                        <div style="font-size:11px;color:var(--primary);border:1px dashed var(--border);padding:4px;background:var(--surface);display:flex;justify-content:space-between;align-items:center;border-radius:4px;">
+                            <span>🔗 ${t.fields[i] || '未綁定'}</span>
+                            ${t.fields[i] ? `<span onclick="removeTableField('${t.id}', ${i})" style="cursor:pointer;color:var(--danger);font-weight:bold;" title="解除綁定">✕</span>` : ''}
+                        </div>
+                    </div>`).join('')}
+                <button class="btn btn-danger btn-block" style="margin-top:10px" onclick="delEl('${t.id}')">刪除表格</button>`;
         }
         
         window.allowDrop = (e, el) => { e.preventDefault(); el.classList.add('drag-over'); };
@@ -363,17 +426,7 @@
         window.updColA = (id, i, v) => { const t = state.elements.find(e => e.id === id); if(t) { t.columnAligns[i] = v; el(id).remove(); renderTableElementAdvanced(t); } };
         window.updateTableField = (id, i, f) => { const t = state.elements.find(e => e.id === id); if(t) { t.fields[i] = f; el(id).remove(); renderTableElementAdvanced(t); renderTableProps(t); } };
         window.updateTableColumnName = (id, i, n) => { const t = state.elements.find(e => e.id === id); if(t) { t.columns[i] = n; el(id).remove(); renderTableElementAdvanced(t); renderTableProps(t); } };
-        
-        // ★★★ Remove Field Function ★★★
-        window.removeTableField = (id, i) => {
-            const t = state.elements.find(e => e.id === id);
-            if(t) {
-                t.fields[i] = ''; // Clear field
-                el(id).remove();
-                renderTableElementAdvanced(t);
-                renderTableProps(t);
-            }
-        };
+        window.removeTableField = (id, i) => { const t = state.elements.find(e => e.id === id); if(t) { t.fields[i] = ''; el(id).remove(); renderTableElementAdvanced(t); renderTableProps(t); } };
 
         // === Context Menu ===
         function showTableCtxMenu(e, t) {
@@ -428,14 +481,20 @@
 
         // --- Common Elements ---
         function addElement(type, c, x, y, w=120, h=30, fs=14, fw='normal', bg='transparent', br='1px dashed #ccc') {
-            const item = { id: 'el-'+Math.random().toString(36).substr(2,9), type, content:c, x, y, width:w, height:h, fontSize:fs, fontWeight:fw, backgroundColor:bg, border:br, fieldName:type==='field'?c:null };
+            const item = { id: 'el-'+Math.random().toString(36).substr(2,9), type, content:c, x:x||20, y:y||20, width:w, height:h, fontSize:fs, fontWeight:fw, backgroundColor:bg, border:br, fieldName:type==='field'?c:null };
             state.elements.push(item); renderEl(item); return item;
         }
         function renderEl(item) {
             if (item.type === 'table') { renderTableElementAdvanced(item); return; }
             const d = document.createElement('div'); d.id = item.id; d.className = 'canvas-element'; updEl(d, item);
             d.innerHTML = `<div class="canvas-element-value">${item.type==='field'?`[${item.content}]`:item.content}</div><div class="resize-handle"></div>`;
-            d.onmousedown = (e) => { if(e.target.className.includes('resize')) return; e.stopPropagation(); selEl(item); drag(e, item, d, 'move'); };
+            d.onmousedown = (e) => { 
+                if(e.target.className.includes('resize')) return; 
+                e.preventDefault(); // ★★★ 關鍵修正：防止瀏覽器預設拖曳行為 ★★★
+                e.stopPropagation(); 
+                selEl(item); 
+                drag(e, item, d, 'move'); 
+            };
             d.querySelector('.resize-handle').onmousedown = (e) => { e.stopPropagation(); drag(e, item, d, 'resize'); };
             el('canvas').appendChild(d);
         }
@@ -446,27 +505,58 @@
                 if(mode==='move'){ item.x = sv.x + (ev.clientX - sx); item.y = sv.y + (ev.clientY - sy); } 
                 else { item.width = Math.max(5, sv.w + (ev.clientX - sx)); item.height = Math.max(5, sv.h + (ev.clientY - sy)); renderProps(item); } 
                 updEl(d,item); 
+                updateFloatBar();
             };
             const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
             document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
         }
         function updEl(d, i) { Object.assign(d.style, { left:i.x+'px', top:i.y+'px', width:i.width+'px', height:i.height+'px', fontSize:i.fontSize+'px', fontWeight:i.fontWeight, background:i.backgroundColor, border:i.border }); }
-        function selEl(i) { state.selected=i; document.querySelectorAll('.selected').forEach(x=>x.classList.remove('selected')); el(i.id).classList.add('selected'); renderProps(i); }
+        
+        function selEl(i) { state.selected=i; document.querySelectorAll('.selected').forEach(x=>x.classList.remove('selected')); el(i.id).classList.add('selected'); renderProps(i); updateFloatBar(); }
+        
         function renderProps(i) {
             if (i.type === 'table') return renderTableProps(i);
             el('props').innerHTML = `
-                <div class="form-group"><label>內容</label><input class="form-control" value="${i.content}" oninput="setProp('${i.id}','content',this.value)"></div>
-                <div style="display:flex; gap:5px;">
-                    <div class="form-group" style="flex:1"><label>寬</label><input type="number" class="form-control" value="${i.width}" oninput="setProp('${i.id}','width',+this.value)"></div>
-                    <div class="form-group" style="flex:1"><label>高</label><input type="number" class="form-control" value="${i.height}" oninput="setProp('${i.id}','height',+this.value)"></div>
+                <div class="panel-title">元件屬性</div>
+                <div class="form-group"><label class="form-label">內容</label><input class="form-control" value="${i.content}" oninput="setProp('${i.id}','content',this.value)"></div>
+                <div style="display:flex; gap:8px;">
+                    <div class="form-group" style="flex:1"><label class="form-label">寬</label><input type="number" class="form-control" value="${i.width}" oninput="setProp('${i.id}','width',+this.value)"></div>
+                    <div class="form-group" style="flex:1"><label class="form-label">高</label><input type="number" class="form-control" value="${i.height}" oninput="setProp('${i.id}','height',+this.value)"></div>
                 </div>
-                <div class="form-group"><label>字體大小</label><input type="number" class="form-control" value="${i.fontSize}" oninput="setProp('${i.id}','fontSize',+this.value)"></div>
-                <div class="form-group"><label>背景色</label><input type="color" style="width:100%" value="${i.backgroundColor==='transparent'?'#ffffff':i.backgroundColor}" oninput="setProp('${i.id}','backgroundColor',this.value)"></div>
-                <div class="form-group"><label>邊框</label><select class="form-control" onchange="setProp('${i.id}','border',this.value)"><option value="none">無</option><option value="1px solid #000">實線</option><option value="1px dashed #000">虛線</option></select></div>
-                <button class="btn btn-danger btn-block" onclick="delEl('${i.id}')">刪除</button>`;
+                <div class="form-group"><label class="form-label">字體大小</label><input type="number" class="form-control" value="${i.fontSize}" oninput="setProp('${i.id}','fontSize',+this.value)"></div>
+                <div class="form-group"><label class="form-label">背景色</label><input type="color" class="form-control" style="height:40px" value="${i.backgroundColor==='transparent'?'#ffffff':i.backgroundColor}" oninput="setProp('${i.id}','backgroundColor',this.value)"></div>
+                <div class="form-group"><label class="form-label">邊框</label><select class="form-control" onchange="setProp('${i.id}','border',this.value)"><option value="none">無</option><option value="1px solid #000">實線</option><option value="1px dashed #000">虛線</option></select></div>
+                <button class="btn btn-danger btn-block" onclick="delEl('${i.id}')">刪除元件</button>`;
         }
         window.setProp = (id, k, v) => { const i = state.elements.find(x => x.id === id); if (i) { i[k] = v; updEl(el(id), i); if (k === 'content') el(id).querySelector('.canvas-element-value').innerText = i.type === 'field' ? `[${v}]` : v; } };
-        window.delEl = (id) => { state.elements = state.elements.filter(x => x.id !== id); el(id).remove(); el('props').innerHTML = ''; };
+        window.delEl = (id) => { state.elements = state.elements.filter(x => x.id !== id); el(id).remove(); el('props').innerHTML = ''; el('floatBar').classList.remove('show'); };
+
+        // Float Bar
+        function updateFloatBar() {
+            const sel = state.selected && el(state.selected.id);
+            const bar = el('floatBar');
+            if (sel && state.selected.type !== 'table') {
+                const rect = sel.getBoundingClientRect();
+                const canvasRect = el('canvas').getBoundingClientRect();
+                bar.style.left = (rect.right - canvasRect.left + 10) + 'px';
+                bar.style.top = (rect.top - canvasRect.top - 50) + 'px';
+                bar.classList.add('show');
+            } else {
+                bar.classList.remove('show');
+            }
+        }
+        window.duplicateSelected = () => {
+            if (!state.selected) return;
+            const orig = state.selected;
+            const copy = JSON.parse(JSON.stringify(orig));
+            copy.id = 'el-' + Math.random().toString(36).substr(2,9);
+            copy.x += 20; copy.y += 20;
+            state.elements.push(copy);
+            renderEl(copy);
+        };
+        window.bringToFront = () => { if(state.selected){ const el = state.elements.splice(state.elements.indexOf(state.selected),1)[0]; state.elements.push(el); rerenderAll(); } };
+        window.sendToBack = () => { if(state.selected){ const el = state.elements.splice(state.elements.indexOf(state.selected),1)[0]; state.elements.unshift(el); rerenderAll(); } };
+        function rerenderAll() { el('canvas').innerHTML = '<div id="splitLine"></div>'; state.elements.forEach(renderEl); }
 
         // --- PDF & File ---
         el('pdfBtn').onclick = () => { el('pdfFile').value = ''; el('pdfFile').click(); };
@@ -490,10 +580,10 @@
         el('dataFile').onchange = (e) => {
             const f = e.target.files[0]; if (!f) return;
             const r = new FileReader();
-            r.onload = (ev) => { state.data = f.name.endsWith('.json') ? JSON.parse(ev.target.result) : parseCSV(ev.target.result); state.fields = Object.keys(state.data[0] || {}); renderFields(); el('fileInfo').innerText = `✅ ${state.data.length} 筆`; }; r.readAsText(f);
+            r.onload = (ev) => { state.data = f.name.endsWith('.json') ? JSON.parse(ev.target.result) : parseCSV(ev.target.result); state.fields = Object.keys(state.data[0] || {}); renderFields(); el('fileInfo').innerText = `✅ ${state.data.length} 筆資料`; }; r.readAsText(f);
         };
         function parseCSV(t) { const [h, ...r] = t.trim().split('\n'); const ks = h.split(',').map(s => s.trim()); return r.map(l => l.split(',').reduce((a, v, i) => ({ ...a, [ks[i]]: v.trim() }), {})); }
-        function renderFields() { el('fieldList').innerHTML = state.fields.map(f => `<div class="field-item" draggable="true" data-f="${f}">📄 ${f}</div>`).join(''); el('grpField').innerHTML = `<option value="">--</option>` + state.fields.map(f => `<option value="${f}">${f}</option>`).join(''); initDrag(); }
+        function renderFields() { el('fieldList').innerHTML = state.fields.map(f => `<div class="field-item" draggable="true" data-f="${f}"><span class="material-symbols-outlined" style="font-size:16px;color:var(--primary)">data_object</span> ${f}</div>`).join(''); el('grpField').innerHTML = `<option value="">--</option>` + state.fields.map(f => `<option value="${f}">${f}</option>`).join(''); initDrag(); }
         function initDrag() {
             el('fieldList').ondragstart = (e) => { e.dataTransfer.setData('type', 'field'); e.dataTransfer.setData('val', e.target.dataset.f); };
             el('canvas').ondragover = (e) => e.preventDefault();
@@ -546,7 +636,7 @@
         // Smart Table Printing
         function mkTblRow(t, rec, y, isH) {
             const r = document.createElement('div'); r.className = 'print-table-row';
-            r.style.cssText = `position:absolute; left:${t.x}px; top:${y}px; display:flex; width:${t.columnWidths.reduce((a,b)=>a+b,0)}px;`;
+            r.style.cssText = `position:relative; left:${t.x}px; display:flex; width:${t.columnWidths.reduce((a,b)=>a+b,0)}px;`;
             const merges = t.mergedCells?.filter(m => m.row === (isH ? 0 : 1)) || [];
             const skip = new Set();
             (isH ? t.columns : t.fields).forEach((val, i) => {
@@ -567,13 +657,15 @@
             const g = {}, kf = state.config.grpF; state.data.forEach(r => { const k = kf ? r[kf] : 'A'; if (!g[k]) g[k] = []; g[k].push(r); });
             const pH = state.config.size === 'receipt80' ? 99999 : 1050;
             Object.values(g).forEach(rs => {
-                let p = mkPg(); c.appendChild(p); let cy = 0;
+                let p = mkPg(); c.appendChild(p); 
+                const wrapper = document.createElement('div'); wrapper.className = 'print-table-wrapper'; wrapper.style.top = state.config.splitY + 'px'; p.appendChild(wrapper);
+                let cy = 0;
                 rs.forEach((r, idx) => {
                     state.elements.filter(e => e.type === 'table').forEach(t => {
-                        if (idx === 0) { const h = mkTblRow(t, null, t.y, true); p.appendChild(h); cy = t.y + h.offsetHeight; }
-                        const d = mkTblRow(t, r, cy, false); p.appendChild(d); const rh = d.offsetHeight;
-                        if (cy + rh > pH) { d.remove(); p = mkPg(); c.appendChild(p); const h = mkTblRow(t, null, t.y, true); p.appendChild(h); cy = t.y + h.offsetHeight; d.style.top = cy + 'px'; p.appendChild(d); }
-                        cy += rh;
+                        if (idx === 0) { const h = mkTblRow(t, null, 0, true); wrapper.appendChild(h); cy += h.offsetHeight; }
+                        const d = mkTblRow(t, r, 0, false); wrapper.appendChild(d); 
+                        if (cy > pH) { d.remove(); p = mkPg(); c.appendChild(p); const newWrap = document.createElement('div'); newWrap.className = 'print-table-wrapper'; newWrap.style.top = state.config.splitY + 'px'; p.appendChild(newWrap); const h = mkTblRow(t, null, 0, true); newWrap.appendChild(h); newWrap.appendChild(d); cy = 0; }
+                        cy += 30;
                     });
                     state.elements.filter(e => e.type !== 'table').forEach(e => { if(idx===0) p.appendChild(mkEl(e, r)); });
                 });
