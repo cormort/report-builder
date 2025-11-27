@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Report Studio v5.3 - 穩定修復版</title>
+    <title>Pro Report Studio v5.4 - 直覺拖曳版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <style>
-        :root { --primary: #2186c4; --bg: #f0f2f5; --surface: #ffffff; --border: #dcdfe6; }
+        :root { --primary: #2186c4; --bg: #f0f2f5; --surface: #ffffff; --border: #dcdfe6; --highlight: #e6f7ff; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); height: 100vh; display: flex; flex-direction: column; color: #333; }
         
-        /* Layout & UI */
+        /* Layout */
         .header { background: #2b3a42; color: white; padding: 0 20px; height: 60px; display: flex; justify-content: space-between; align-items: center; }
         .main-layout { display: flex; flex: 1; overflow: hidden; }
         .panel { background: var(--surface); display: flex; flex-direction: column; border-right: 1px solid var(--border); }
@@ -20,19 +20,20 @@
         .right-panel { width: 320px; padding: 15px; overflow-y: auto; border-left: 1px solid var(--border); }
         .panel-title { font-size: 14px; font-weight: bold; color: #666; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
         
+        /* UI Components */
         .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; background: #e0e0e0; display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: 0.2s; }
         .btn:hover { background: #d0d0d0; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-danger { background: #f56c6c; color: white; }
         .btn-success { background: #67c23a; color: white; }
         .btn-block { width: 100%; margin-bottom: 5px; }
-        
         .form-group { margin-bottom: 10px; }
         .form-label { font-size: 12px; color: #666; display: block; margin-bottom: 3px; }
         .form-control { width: 100%; padding: 5px; border: 1px solid var(--border); font-size: 13px; }
         
         .upload-area { border: 2px dashed var(--border); padding: 15px; text-align: center; cursor: pointer; font-size: 13px; margin-bottom: 10px; color: #666; }
-        .field-item { padding: 5px 8px; background: #f4f4f5; border: 1px solid #e9e9eb; margin-bottom: 4px; cursor: grab; font-size: 12px; }
+        .field-item { padding: 5px 8px; background: #f4f4f5; border: 1px solid #e9e9eb; margin-bottom: 4px; cursor: grab; font-size: 12px; user-select: none; }
+        .field-item:hover { background: var(--highlight); border-color: var(--primary); }
         
         /* Canvas */
         .canvas-wrapper { box-shadow: 0 0 20px rgba(0,0,0,0.5); margin: auto; transition: 0.3s; }
@@ -44,16 +45,19 @@
         .canvas-element.selected .resize-handle { display: block; }
         #splitLine { position: absolute; left: 0; width: 100%; height: 0; border-top: 2px dashed #f56c6c; z-index: 90; cursor: ns-resize; display: none; }
         
-        /* Table Special Styles */
+        /* Table Styles */
         .table-element { display: block !important; overflow: visible !important; border: none !important; background: transparent !important; }
         .col-resizer:hover { opacity: 1 !important; background: var(--primary) !important; }
         
-        /* Context Menu */
+        /* Drop Zones Highlight */
+        .drop-active { background-color: #e6f7ff !important; border: 2px dashed var(--primary) !important; }
+        .prop-col-item { transition: 0.2s; border: 1px solid transparent; }
+        .prop-col-item.drag-over { border-color: var(--primary); background: #e6f7ff; }
+
+        /* Context Menu & Modal */
         .context-menu { position: fixed; background: white; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 12px rgba(0,0,0,0.2); z-index: 9999; min-width: 150px; overflow: hidden; }
         .context-menu div { padding: 8px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f0f0f0; color: #333; }
         .context-menu div:hover { background: #f5f5f5; color: var(--primary); }
-
-        /* Modals */
         .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; }
         .modal { background: white; padding: 20px; border-radius: 8px; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
 
@@ -72,7 +76,7 @@
 </head>
 <body>
     <div class="header">
-        <div style="font-weight: bold;">📊 Pro Report Studio v5.3</div>
+        <div style="font-weight: bold;">📊 Pro Report Studio v5.4</div>
         <div><button class="btn btn-success" id="printBtn">🖨️ 列印 / 匯出</button></div>
     </div>
 
@@ -98,7 +102,7 @@
                 <button class="btn" onclick="addElement('text','',50,50,2,100,12,'normal','#000','none')" title="直線">┃</button>
             </div>
 
-            <div class="panel-title" style="margin-top:10px">4. 欄位</div>
+            <div class="panel-title" style="margin-top:10px">4. 欄位 (可拖曳)</div>
             <div id="fieldList" style="min-height:100px;"></div>
         </div>
 
@@ -146,7 +150,6 @@
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px">
                     <div><label class="form-label">欄</label><input type="number" id="gCols" class="form-control" value="2"></div>
                     <div><label class="form-label">列</label><input type="number" id="gRows" class="form-control" value="4"></div>
-                    <!-- 修正：補回間距設定 -->
                     <div><label class="form-label">間距X</label><input type="number" id="gX" class="form-control" value="10"></div>
                     <div><label class="form-label">間距Y</label><input type="number" id="gY" class="form-control" value="10"></div>
                 </div>
@@ -222,13 +225,17 @@
             html += '</div>';
             // Data
             html += `<div style="display:flex; height:${table.rowHeight}px;">`;
-            table.fields.forEach((f, i) => { html += `<div style="width:${table.columnWidths[i]}px; border:${table.cellBorder}; padding:5px; font-size:${table.fontSize}px; text-align:${table.columnAligns[i]}; color:#666; overflow:hidden; box-sizing:border-box;">[${f||'資料'}]</div>`; });
+            table.fields.forEach((f, i) => { 
+                // Add drop target class
+                html += `<div class="table-cell-drop" data-col="${i}" style="width:${table.columnWidths[i]}px; border:${table.cellBorder}; padding:5px; font-size:${table.fontSize}px; text-align:${table.columnAligns[i]}; color:#666; overflow:hidden; box-sizing:border-box;">[${f||'拖曳欄位至此'}]</div>`; 
+            });
             html += '</div></div>';
             
             d.innerHTML = html;
             d.onmouseenter = () => d.querySelectorAll('.col-resizer').forEach(r => r.style.opacity = '1');
             d.onmouseleave = () => d.querySelectorAll('.col-resizer').forEach(r => r.style.opacity = '0');
             
+            // Resizer Logic
             d.querySelectorAll('.col-resizer').forEach(r => {
                 r.onmousedown = (e) => {
                     e.stopPropagation(); const ci = +r.dataset.col, sx = e.clientX, sw = table.columnWidths[ci];
@@ -237,6 +244,23 @@
                     document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
                 };
             });
+
+            // ★★★ Canvas Drop Logic (Direct to Table Cell) ★★★
+            d.querySelectorAll('.table-cell-drop').forEach(cell => {
+                cell.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); cell.style.background = '#e6f7ff'; });
+                cell.addEventListener('dragleave', (e) => { e.stopPropagation(); cell.style.background = 'transparent'; });
+                cell.addEventListener('drop', (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    const type = e.dataTransfer.getData('type');
+                    const val = e.dataTransfer.getData('val');
+                    if (type === 'field') {
+                        const colIdx = parseInt(cell.dataset.col);
+                        updateTableField(table.id, colIdx, val);
+                    }
+                    cell.style.background = 'transparent';
+                });
+            });
+
             d.onmousedown = (e) => { if(e.target.classList.contains('col-resizer'))return; e.stopPropagation(); selEl(table); dragTable(e, table, d); };
             d.oncontextmenu = (e) => { e.preventDefault(); showTableCtxMenu(e, table); };
             el('canvas').appendChild(d);
@@ -249,7 +273,7 @@
             document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
         }
 
-        // === Table Props ===
+        // === Table Props (With Drop Zones) ===
         function renderTableProps(t) {
             const totalW = t.columnWidths.reduce((a, b) => a + b, 0);
             el('props').innerHTML = `
@@ -260,14 +284,37 @@
                     <div class="form-group"><label>字體</label><input type="number" class="form-control" value="${t.fontSize}" oninput="updTbl('${t.id}','fontSize',+this.value)"></div>
                     <div class="form-group"><label>背景</label><input type="color" class="form-control" value="${t.headerBg}" oninput="updTbl('${t.id}','headerBg',this.value)"></div>
                     <div class="form-group"><label>邊框</label><select class="form-control" onchange="updTbl('${t.id}','cellBorder',this.value)"><option value="none">無</option><option value="1px solid #999">細線</option><option value="2px solid #333">粗線</option></select></div>
-                    <div class="panel-title">欄位微調</div>
-                    ${t.columns.map((c,i)=>`<div style="background:#f5f5f5;padding:5px;margin-bottom:5px;"><div style="font-weight:bold;">${i+1}.${c}</div><div style="display:flex;gap:2px"><input type="number" value="${t.columnWidths[i]}" style="width:50px" oninput="updColW('${t.id}',${i},+this.value)"><select onchange="updColA('${t.id}',${i},this.value)"><option value="left">左</option><option value="center">中</option><option value="right">右</option></select></div></div>`).join('')}
+                    <div class="panel-title">欄位微調 (可拖曳欄位至此)</div>
+                    ${t.columns.map((c,i)=>`
+                        <div class="prop-col-item" style="background:#f5f5f5;padding:8px;margin-bottom:5px;border-radius:4px;" 
+                             ondragover="allowDrop(event, this)" ondragleave="leaveDrop(this)" ondrop="dropToProp(event, '${t.id}', ${i}, this)">
+                            <div style="font-weight:bold;margin-bottom:3px;">${i+1}. ${c}</div>
+                            <div style="display:flex;gap:2px;margin-bottom:3px;">
+                                <input type="number" value="${t.columnWidths[i]}" style="width:50px" oninput="updColW('${t.id}',${i},+this.value)">
+                                <select onchange="updColA('${t.id}',${i},this.value)"><option value="left" ${t.columnAligns[i]=='left'?'selected':''}>左</option><option value="center" ${t.columnAligns[i]=='center'?'selected':''}>中</option><option value="right" ${t.columnAligns[i]=='right'?'selected':''}>右</option></select>
+                            </div>
+                            <div style="font-size:12px;color:#2186c4;border:1px dashed #ccc;padding:2px;background:white;">
+                                🔗 ${t.fields[i] || '未綁定 (拖曳至此)'}
+                            </div>
+                        </div>`).join('')}
                     <button class="btn btn-danger btn-block" onclick="delEl('${t.id}')">刪除表格</button>
                 </div>`;
         }
+        
+        // ★★★ Right Panel Drop Logic ★★★
+        window.allowDrop = (e, el) => { e.preventDefault(); el.classList.add('drag-over'); };
+        window.leaveDrop = (el) => { el.classList.remove('drag-over'); };
+        window.dropToProp = (e, id, idx, el) => {
+            e.preventDefault(); el.classList.remove('drag-over');
+            const type = e.dataTransfer.getData('type');
+            const val = e.dataTransfer.getData('val');
+            if (type === 'field') updateTableField(id, idx, val);
+        };
+
         window.updTbl = (id, k, v) => { const t = state.elements.find(e => e.id === id); if(t) { t[k] = v; el(id).remove(); renderTableElementAdvanced(t); } };
         window.updColW = (id, i, v) => { const t = state.elements.find(e => e.id === id); if(t) { t.columnWidths[i] = Math.max(10, v); el(id).remove(); renderTableElementAdvanced(t); } };
         window.updColA = (id, i, v) => { const t = state.elements.find(e => e.id === id); if(t) { t.columnAligns[i] = v; el(id).remove(); renderTableElementAdvanced(t); } };
+        window.updateTableField = (id, i, f) => { const t = state.elements.find(e => e.id === id); if(t) { t.fields[i] = f; el(id).remove(); renderTableElementAdvanced(t); renderTableProps(t); } };
 
         // === Context Menu ===
         function showTableCtxMenu(e, t) {
