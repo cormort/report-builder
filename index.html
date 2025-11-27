@@ -166,19 +166,32 @@
 
     <div id="print-container"></div>
 
-    <script>
-        // --- State ---
+        <script>
+        // ==========================================
+        // 1. 全局狀態 (State Management)
+        // ==========================================
         const state = {
-            fields: [], elements: [], data: [], selectedElement: null,
+            fields: [],          // CSV 欄位名稱
+            elements: [],        // 畫布上的所有元素物件
+            data: [],            // CSV 數據內容
+            selectedElement: null, // 當前選中的元素
             config: {
-                pageSize: 'a4', orientation: 'portrait',
-                widthMm: 210, heightMm: 297,
-                mode: 'single', // single, group, grid
-                groupField: '', splitY: 150, rowHeight: 30,
-                gridCols: 2, gridRows: 4, gridGapX: 10, gridGapY: 10
+                pageSize: 'a4',
+                orientation: 'portrait',
+                widthMm: 210,
+                heightMm: 297,
+                mode: 'single',  // 'single'(單頁), 'group'(列表), 'grid'(標籤)
+                groupField: '',  // 分組依據欄位
+                splitY: 150,     // 列表模式的分隔線位置
+                rowHeight: 30,   // 列表模式的行高
+                gridCols: 2,     // 標籤模式：橫向欄數
+                gridRows: 4,     // 標籤模式：直向列數
+                gridGapX: 10,    // 標籤模式：水平間距
+                gridGapY: 10     // 標籤模式：垂直間距
             }
         };
-
+    
+        // DOM 元素緩存
         const els = {
             canvas: document.getElementById('canvas'),
             fieldList: document.getElementById('fieldList'),
@@ -188,254 +201,629 @@
             sizeSelect: document.getElementById('pageSizeSelect'),
             orientSelect: document.getElementById('orientationSelect')
         };
-
+    
+        // 初始化
         initCanvas();
         initDrag();
-        
-        // --- 1. Canvas & Size ---
+    
+        // ==========================================
+        // 2. 畫布與版面設定 (Canvas & Layout)
+        // ==========================================
         function initCanvas() {
             updateCanvasSize();
-            els.sizeSelect.onchange = (e) => { state.config.pageSize = e.target.value; updateCanvasSize(); };
-            els.orientSelect.onchange = (e) => { state.config.orientation = e.target.value; updateCanvasSize(); };
+            // 監聽紙張大小變化
+            els.sizeSelect.onchange = (e) => {
+                state.config.pageSize = e.target.value;
+                updateCanvasSize();
+            };
+            // 監聽方向變化
+            els.orientSelect.onchange = (e) => {
+                state.config.orientation = e.target.value;
+                updateCanvasSize();
+            };
         }
-
+    
         function updateCanvasSize() {
             const sizeMap = {
-                'a4': [210, 297], 'a5': [148, 210], 'letter': [216, 279], 'receipt80': [80, 297]
+                'a4': [210, 297],
+                'a5': [148, 210],
+                'letter': [216, 279],
+                'receipt80': [80, 297] // 高度僅為示意
             };
+    
             let [w, h] = sizeMap[state.config.pageSize] || [210, 297];
+    
+            // 如果是橫向，且不是收據模式，則交換長寬
             if (state.config.orientation === 'landscape' && state.config.pageSize !== 'receipt80') {
                 [w, h] = [h, w];
             }
-            state.config.widthMm = w; state.config.heightMm = h;
-            els.canvas.style.width = w + 'mm'; els.canvas.style.height = h + 'mm';
-            if(state.config.pageSize === 'receipt80') {
-                els.canvas.style.height = 'auto'; els.canvas.style.minHeight = '150mm'; els.canvas.style.borderBottom = '3px jagged #ccc';
+    
+            state.config.widthMm = w;
+            state.config.heightMm = h;
+    
+            els.canvas.style.width = w + 'mm';
+            els.canvas.style.height = h + 'mm';
+    
+            // 收據模式特殊處理 (無限長)
+            if (state.config.pageSize === 'receipt80') {
+                els.canvas.style.height = 'auto';
+                els.canvas.style.minHeight = '150mm';
+                els.canvas.style.borderBottom = '3px jagged #ccc';
+            } else {
+                els.canvas.style.borderBottom = 'none';
             }
         }
-
-        // --- 2. Auto Grid Calculation Logic (NEW) ---
+    
+        // ==========================================
+        // 3. 自動排版計算 (Auto Grid Calculation)
+        // ==========================================
         window.autoCalcGrid = () => {
-            if (state.elements.length === 0) return alert('畫布是空的！請先拉入一些內容做為標籤範圍。');
-
+            if (state.elements.length === 0) {
+                alert('畫布是空的！請先設計一個標籤的內容（例如拉入文字或欄位），系統才能計算尺寸。');
+                return;
+            }
+    
             // 1. 計算內容邊界 (Bounding Box)
             let maxX = 0, maxY = 0;
             state.elements.forEach(el => {
                 maxX = Math.max(maxX, el.x + el.width);
                 maxY = Math.max(maxY, el.y + el.height);
             });
-
-            // 2. 取得紙張大小 (轉換為 PX, 1mm ~= 3.78px)
+    
+            // 2. 取得紙張大小 (轉換為 PX, 1mm 約等於 3.78px)
             const MM_TO_PX = 3.78;
             const paperW = state.config.widthMm * MM_TO_PX;
             const paperH = state.config.heightMm * MM_TO_PX;
-
-            // 3. 設定安全邊距 (例如 5mm，避免印表機裁切)
+    
+            // 3. 設定安全邊距 (例如 5mm)
             const margin = 5 * MM_TO_PX;
             const usableW = paperW - (margin * 2);
             const usableH = paperH - (margin * 2);
-
-            // 4. 取得間距設定
+    
+            // 4. 取得目前設定的間距
             const gapX = state.config.gridGapX;
             const gapY = state.config.gridGapY;
-
+    
             // 5. 計算公式
-            // Cols * ItemW + (Cols-1) * Gap <= UsableW
-            // Cols * (ItemW + Gap) - Gap <= UsableW
-            // Cols <= (UsableW + Gap) / (ItemW + Gap)
-            const cols = Math.floor((usableW + gapX) / (maxX + gapX));
-            const rows = Math.floor((usableH + gapY) / (maxY + gapY));
-
+            // 若寬度為 W，間距為 G，數量為 N
+            // N * W + (N-1) * G <= UsableWidth
+            // N * (W + G) - G <= UsableWidth
+            // N <= (UsableWidth + G) / (W + G)
+            const itemW = maxX;
+            const itemH = maxY;
+            
+            const cols = Math.floor((usableW + gapX) / (itemW + gapX));
+            const rows = Math.floor((usableH + gapY) / (itemH + gapY));
+    
             if (cols < 1 || rows < 1) {
-                alert(`⚠️ 內容尺寸 (${Math.round(maxX)}x${Math.round(maxY)}px) 太大，無法放入當前紙張！`);
+                alert(`⚠️ 內容尺寸 (${Math.round(itemW)}x${Math.round(itemH)}px) 太大，無法放入當前紙張！`);
                 return;
             }
-
+    
             // 6. 應用設定
             state.config.gridCols = cols;
             state.config.gridRows = rows;
             document.getElementById('gridCols').value = cols;
             document.getElementById('gridRows').value = rows;
-
-            alert(`✅ 計算完成！\n依照當前內容大小，這張紙最多可印：\n${cols} 欄 x ${rows} 列 = ${cols*rows} 張\n(已保留5mm安全邊距)`);
+    
+            alert(`✅ 計算完成！\n單個內容：${Math.round(itemW)} x ${Math.round(itemH)} px\n排版結果：${cols} 欄 x ${rows} 列\n單頁張數：${cols * rows} 張`);
         };
-
-        // --- 3. Templates ---
+    
+        // ==========================================
+        // 4. 快速範本 (Templates)
+        // ==========================================
         window.tpl = (type) => {
-            if(!confirm('這將清除當前畫布，確定嗎？')) return;
-            state.elements = []; els.canvas.innerHTML = '<div id="splitLine"></div>';
+            if (!confirm('這將清除當前畫布，確定嗎？')) return;
             
-            if(type === 'labels') {
+            // 清除畫布
+            state.elements = [];
+            els.canvas.innerHTML = '<div id="splitLine"></div>';
+    
+            if (type === 'labels') {
                 setPage('a4', 'portrait', 'grid');
-                // 模擬一個標籤內容
+                // 模擬標籤框
                 addElement('text', '', 0, 0, 300, 180, 12, 'normal', 'transparent', '2px solid #ccc');
                 addElement('title', '產品標籤', 10, 10, 150, 30, 16, 'bold');
                 addElement('text', '品名:', 10, 50, 50, 25, 12, 'bold');
-                addElement('field', 'Product', 70, 50, 200, 25, 12, 'normal', '#eee');
-                // 自動觸發計算 (模擬使用者點擊)
-                // setTimeout(window.autoCalcGrid, 100); 
-            }
+                if(state.fields.length > 0) {
+                    addElement('field', state.fields[0], 70, 50, 200, 25, 12, 'normal', '#eee');
+                } else {
+                    addElement('text', '[品名]', 70, 50, 200, 25, 12, 'normal', '#eee');
+                }
+            } 
             else if (type === 'tw_b2b') {
                 setPage('a4', 'portrait', 'group');
                 addElement('title', '電子計算機統一發票', 250, 30, 300, 30, 22, 'bold');
                 addElement('text', '買受人：', 40, 90, 60, 25, 12, 'bold');
                 addElement('field', 'Buyer', 100, 90, 200, 25, 12, 'normal', '#eee', '1px solid #999');
+                
+                // 設定表格線
                 state.config.splitY = 140;
-                ['品名','數量','單價','金額'].forEach((h,i)=>addElement('text',h,40+i*100,115,100,25,12,'bold','#f0f0f0','1px solid #333'));
+                const headers = ['品名', '數量', '單價', '金額', '備註'];
+                headers.forEach((h, i) => {
+                    addElement('text', h, 40 + i * 100, 115, 100, 25, 12, 'bold', '#f0f0f0', '1px solid #333');
+                });
                 updateSplitLine();
-            }
-            else if(type === 'tw_einvoice') {
+            } 
+            else if (type === 'tw_einvoice') {
                 setPage('receipt80', 'portrait', 'group');
                 addElement('title', '電子發票證明聯', 30, 20, 200, 30, 18, 'bold');
-                addElement('field', 'InvoiceNo', 40, 60, 200, 25, 18, 'bold');
+                addElement('text', '112年 11-12月', 50, 50, 150, 25, 16, 'bold');
                 state.config.splitY = 150;
                 updateSplitLine();
-            }
-            else if(type === 'table') {
+            } 
+            else if (type === 'table') {
                 setPage('a4', 'portrait', 'group');
                 addElement('title', '報表', 20, 20, 200, 40, 24, 'bold');
                 state.config.splitY = 80;
                 updateSplitLine();
             }
         };
-
+    
         function setPage(size, orient, mode) {
             els.sizeSelect.value = state.config.pageSize = size;
             els.orientSelect.value = state.config.orientation = orient;
             els.modeSelect.value = state.config.mode = mode;
-            updateCanvasSize(); updateSettingsUI();
+            updateCanvasSize();
+            updateSettingsUI();
         }
-
-        // --- Settings Logic ---
-        els.modeSelect.onchange = (e) => { state.config.mode = e.target.value; updateSettingsUI(); };
+    
+        // ==========================================
+        // 5. 設定面板邏輯 (Settings UI)
+        // ==========================================
+        els.modeSelect.onchange = (e) => {
+            state.config.mode = e.target.value;
+            updateSettingsUI();
+        };
+    
         function updateSettingsUI() {
             const m = state.config.mode;
             document.getElementById('groupSettings').style.display = m === 'group' ? 'block' : 'none';
             document.getElementById('gridSettings').style.display = m === 'grid' ? 'block' : 'none';
             els.splitLine.style.display = m === 'group' ? 'block' : 'none';
         }
-        ['gridCols', 'gridRows', 'gridGapX', 'gridGapY'].forEach(id => document.getElementById(id).onchange = (e) => state.config[id] = parseInt(e.target.value));
-        document.getElementById('splitYInput').onchange = (e) => { state.config.splitY = +e.target.value; updateSplitLine(); };
+    
+        // 綁定所有 input 事件
+        ['gridCols', 'gridRows', 'gridGapX', 'gridGapY'].forEach(id => {
+            document.getElementById(id).onchange = (e) => state.config[id] = parseInt(e.target.value);
+        });
+        document.getElementById('splitYInput').onchange = (e) => {
+            state.config.splitY = +e.target.value;
+            updateSplitLine();
+        };
         document.getElementById('rowHeightInput').onchange = (e) => state.config.rowHeight = +e.target.value;
-
-        // --- Elements ---
+    
+    
+        // ==========================================
+        // 6. 元素操作 (Add / Render / Edit)
+        // ==========================================
         document.getElementById('addTextBtn').onclick = () => addElement('text', '文字', 20, 20);
         document.getElementById('addTitleBtn').onclick = () => addElement('title', '標題', 20, 20, 150, 40, 20, 'bold');
         document.getElementById('addBoxBtn').onclick = () => addElement('text', '', 50, 50, 100, 100, 12, 'normal', 'transparent', '2px solid #333');
-
-        function addElement(type, content, x, y, w=120, h=30, fs=14, fw='normal', bg='transparent', border='1px dashed #ccc') {
-            const el = { id: 'el-'+Math.random().toString(36).substr(2,9), type, content, x, y, width:w, height:h, fontSize:fs, fontWeight:fw, backgroundColor:bg, border, fieldName: type==='field'?content:null };
-            state.elements.push(el); renderEl(el); return el;
+    
+        function addElement(type, content, x, y, w = 120, h = 30, fs = 14, fw = 'normal', bg = 'transparent', border = '1px dashed #ccc') {
+            const el = {
+                id: 'el-' + Math.random().toString(36).substr(2, 9),
+                type: type,
+                content: content,
+                x: x,
+                y: y,
+                width: w,
+                height: h,
+                fontSize: fs,
+                fontWeight: fw,
+                backgroundColor: bg,
+                border: border,
+                fieldName: type === 'field' ? content : null
+            };
+            state.elements.push(el);
+            renderEl(el);
+            return el;
         }
-
+    
         function renderEl(el) {
-            const div = document.createElement('div'); div.id = el.id; div.className = 'canvas-element';
+            const div = document.createElement('div');
+            div.id = el.id;
+            div.className = 'canvas-element';
             updateElStyle(div, el);
-            div.innerHTML = `<div class="canvas-element-value">${el.type==='field'?`[${el.content}]`:el.content}</div><div class="resize-handle"></div>`;
+    
+            div.innerHTML = `
+                <div class="canvas-element-value">${el.type === 'field' ? `[${el.content}]` : el.content}</div>
+                <div class="resize-handle"></div>
+            `;
+    
+            // 滑鼠拖曳邏輯
             div.onmousedown = (e) => {
-                if(e.target.classList.contains('resize-handle')) return;
-                e.stopPropagation(); selectEl(el);
-                const sx=e.clientX, sy=e.clientY, ox=el.x, oy=el.y;
-                const mv=(ev)=>{el.x=ox+(ev.clientX-sx); el.y=oy+(ev.clientY-sy); updateElStyle(div,el);};
-                const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
-                document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+                if (e.target.classList.contains('resize-handle')) return;
+                e.stopPropagation();
+                selectEl(el);
+    
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const origX = el.x;
+                const origY = el.y;
+    
+                const onMove = (ev) => {
+                    el.x = origX + (ev.clientX - startX);
+                    el.y = origY + (ev.clientY - startY);
+                    updateElStyle(div, el);
+                };
+    
+                const onUp = () => {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                };
+    
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
             };
-            const hdl=div.querySelector('.resize-handle');
-            hdl.onmousedown=(e)=>{
-                e.stopPropagation(); const sx=e.clientX, sy=e.clientY, ow=el.width, oh=el.height;
-                const rz=(ev)=>{el.width=Math.max(10,ow+(ev.clientX-sx)); el.height=Math.max(10,oh+(ev.clientY-sy)); updateElStyle(div,el); renderProps(el);};
-                const st=()=>{document.removeEventListener('mousemove',rz);document.removeEventListener('mouseup',st);};
-                document.addEventListener('mousemove',rz);document.addEventListener('mouseup',st);
+    
+            // 縮放手柄邏輯
+            const handle = div.querySelector('.resize-handle');
+            handle.onmousedown = (e) => {
+                e.stopPropagation();
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const origW = el.width;
+                const origH = el.height;
+    
+                const onResize = (ev) => {
+                    el.width = Math.max(10, origW + (ev.clientX - startX));
+                    el.height = Math.max(10, origH + (ev.clientY - startY));
+                    updateElStyle(div, el);
+                    renderProps(el);
+                };
+    
+                const onUp = () => {
+                    document.removeEventListener('mousemove', onResize);
+                    document.removeEventListener('mouseup', onUp);
+                };
+    
+                document.addEventListener('mousemove', onResize);
+                document.addEventListener('mouseup', onUp);
             };
+    
             els.canvas.appendChild(div);
         }
+    
         function updateElStyle(div, el) {
-            div.style.left=el.x+'px'; div.style.top=el.y+'px'; div.style.width=el.width+'px'; div.style.height=el.height+'px';
-            div.style.fontSize=el.fontSize+'px'; div.style.fontWeight=el.fontWeight; div.style.background=el.backgroundColor; div.style.border=el.border;
+            div.style.left = el.x + 'px';
+            div.style.top = el.y + 'px';
+            div.style.width = el.width + 'px';
+            div.style.height = el.height + 'px';
+            div.style.fontSize = el.fontSize + 'px';
+            div.style.fontWeight = el.fontWeight;
+            div.style.background = el.backgroundColor;
+            div.style.border = el.border;
         }
+    
         function selectEl(el) {
-            state.selectedElement = el; document.querySelectorAll('.canvas-element').forEach(d=>d.classList.remove('selected'));
-            document.getElementById(el.id).classList.add('selected'); renderProps(el);
+            state.selectedElement = el;
+            document.querySelectorAll('.canvas-element').forEach(d => d.classList.remove('selected'));
+            document.getElementById(el.id).classList.add('selected');
+            renderProps(el);
         }
+    
         function renderProps(el) {
             els.propPanel.innerHTML = `
-                <div class="form-group"><label class="form-label">內容</label><input class="form-control" value="${el.content}" oninput="setProp('${el.id}','content',this.value)"></div>
-                <div class="form-group"><label class="form-label">字體大小</label><input type="number" class="form-control" value="${el.fontSize}" oninput="setProp('${el.id}','fontSize',this.value)"></div>
-                <div class="form-group"><label class="form-label">背景色</label><input type="color" style="width:100%" value="${el.backgroundColor==='transparent'?'#ffffff':el.backgroundColor}" oninput="setProp('${el.id}','backgroundColor',this.value)"></div>
-                <div class="form-group"><label class="form-label">邊框</label><select class="form-control" onchange="setProp('${el.id}','border',this.value)"><option value="none">無</option><option value="1px solid #000">實線</option><option value="1px dashed #000">虛線</option><option value="2px solid #000">粗框</option></select></div>
-                <button class="btn btn-danger btn-block" onclick="delEl('${el.id}')">刪除</button>
+                <div class="form-group">
+                    <label class="form-label">內容</label>
+                    <input class="form-control" value="${el.content}" oninput="setProp('${el.id}','content',this.value)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">字體大小</label>
+                    <input type="number" class="form-control" value="${el.fontSize}" oninput="setProp('${el.id}','fontSize',this.value)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">背景色</label>
+                    <input type="color" style="width:100%" value="${el.backgroundColor==='transparent'?'#ffffff':el.backgroundColor}" oninput="setProp('${el.id}','backgroundColor',this.value)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">邊框</label>
+                    <select class="form-control" onchange="setProp('${el.id}','border',this.value)">
+                        <option value="none" ${el.border==='none'?'selected':''}>無</option>
+                        <option value="1px solid #000" ${el.border.includes('solid') && !el.border.includes('2px')?'selected':''}>實線</option>
+                        <option value="1px dashed #000" ${el.border.includes('dashed')?'selected':''}>虛線</option>
+                        <option value="2px solid #000" ${el.border.includes('2px')?'selected':''}>粗框</option>
+                    </select>
+                </div>
+                <button class="btn btn-danger btn-block" onclick="delEl('${el.id}')">刪除元素</button>
             `;
         }
-        window.setProp = (id,k,v) => { const el=state.elements.find(e=>e.id===id); if(el){ el[k]=v; updateElStyle(document.getElementById(id),el); if(k==='content') document.getElementById(id).querySelector('.canvas-element-value').innerText=el.type==='field'?`[${v}]`:v; } };
-        window.delEl = (id) => { state.elements=state.elements.filter(e=>e.id!==id); document.getElementById(id).remove(); els.propPanel.innerHTML=''; };
-
-        // --- File & Drag ---
+    
+        window.setProp = (id, key, val) => {
+            const el = state.elements.find(e => e.id === id);
+            if (el) {
+                el[key] = val;
+                const div = document.getElementById(id);
+                updateElStyle(div, el);
+                if (key === 'content') {
+                    div.querySelector('.canvas-element-value').innerText = el.type === 'field' ? `[${val}]` : val;
+                }
+            }
+        };
+    
+        window.delEl = (id) => {
+            state.elements = state.elements.filter(e => e.id !== id);
+            document.getElementById(id).remove();
+            els.propPanel.innerHTML = '<div style="text-align:center; padding:10px; color:#999">已刪除</div>';
+        };
+    
+        // ==========================================
+        // 7. 檔案處理與拖曳 (File & Drag)
+        // ==========================================
         document.getElementById('uploadArea').onclick = () => document.getElementById('fileInput').click();
         document.getElementById('fileInput').onchange = (e) => {
-            const file = e.target.files[0]; if(!file) return;
+            const file = e.target.files[0];
+            if (!file) return;
             const reader = new FileReader();
             reader.onload = (ev) => {
                 state.data = file.name.endsWith('.json') ? JSON.parse(ev.target.result) : parseCSV(ev.target.result);
-                state.fields = Object.keys(state.data[0]||{});
-                renderFields(); document.getElementById('fileInfo').innerText = `✅ ${state.data.length} 筆數據`;
-            }; reader.readAsText(file);
+                state.fields = Object.keys(state.data[0] || {});
+                renderFields();
+                document.getElementById('fileInfo').innerText = `✅ 已載入 ${state.data.length} 筆數據`;
+            };
+            reader.readAsText(file);
         };
-        function parseCSV(t) { const [h,...r]=t.trim().split('\n'); const ks=h.split(',').map(s=>s.trim()); return r.map(l=>l.split(',').reduce((a,v,i)=>({...a,[ks[i]]:v.trim()}),{})); }
+    
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',').map(s => s.trim());
+            return lines.slice(1).map(line => {
+                const values = line.split(',');
+                return headers.reduce((obj, header, i) => {
+                    obj[header] = values[i] ? values[i].trim() : '';
+                    return obj;
+                }, {});
+            });
+        }
+    
         function renderFields() {
-            els.fieldList.innerHTML = state.fields.map(f => `<div class="field-item" draggable="true" data-f="${f}">📄 ${f}</div>`).join('');
+            els.fieldList.innerHTML = state.fields.map(f => 
+                `<div class="field-item" draggable="true" data-f="${f}">📄 ${f}</div>`
+            ).join('');
+            
+            // 更新分組選單
             const sel = document.getElementById('groupFieldSelect');
-            sel.innerHTML = `<option value="">--未選擇--</option>` + state.fields.map(f=>`<option value="${f}">${f}</option>`).join('');
+            sel.innerHTML = `<option value="">--未選擇--</option>` + 
+                state.fields.map(f => `<option value="${f}">${f}</option>`).join('');
         }
+    
         function initDrag() {
-            els.fieldList.addEventListener('dragstart', e => { e.dataTransfer.setData('type','field'); e.dataTransfer.setData('val', e.target.dataset.f); });
+            // 來源拖曳
+            els.fieldList.addEventListener('dragstart', e => {
+                e.dataTransfer.setData('type', 'field');
+                e.dataTransfer.setData('val', e.target.dataset.f);
+            });
+    
+            // 畫布放置
             els.canvas.addEventListener('dragover', e => e.preventDefault());
-            els.canvas.addEventListener('drop', e => { e.preventDefault(); const t=e.dataTransfer.getData('type'); if(t) addElement(t, e.dataTransfer.getData('val'), e.clientX-els.canvas.getBoundingClientRect().left, e.clientY-els.canvas.getBoundingClientRect().top); });
-            let spDrag = false; els.splitLine.onmousedown = () => spDrag = true;
-            document.onmousemove = (e) => { if(spDrag) { state.config.splitY = Math.max(0, e.clientY - els.canvas.getBoundingClientRect().top); updateSplitLine(); document.getElementById('splitYInput').value = Math.round(state.config.splitY); } };
-            document.onmouseup = () => spDrag = false;
+            els.canvas.addEventListener('drop', e => {
+                e.preventDefault();
+                const type = e.dataTransfer.getData('type');
+                if (!type) return;
+                const rect = els.canvas.getBoundingClientRect();
+                addElement(type, e.dataTransfer.getData('val'), e.clientX - rect.left, e.clientY - rect.top);
+            });
+    
+            // 分隔線拖曳
+            let spDrag = false;
+            els.splitLine.onmousedown = () => spDrag = true;
+            document.addEventListener('mousemove', (e) => {
+                if (spDrag) {
+                    const rect = els.canvas.getBoundingClientRect();
+                    state.config.splitY = Math.max(0, e.clientY - rect.top);
+                    updateSplitLine();
+                    document.getElementById('splitYInput').value = Math.round(state.config.splitY);
+                }
+            });
+            document.addEventListener('mouseup', () => spDrag = false);
         }
-        function updateSplitLine() { els.splitLine.style.top = state.config.splitY + 'px'; }
+    
+        function updateSplitLine() {
+            els.splitLine.style.top = state.config.splitY + 'px';
+        }
+    
+        // ==========================================
+    // 8. 列印核心邏輯 (Print Engine) - 修正版
+    // ==========================================
+    document.getElementById('printBtn').onclick = () => {
+        const ctr = document.getElementById('print-container');
+        ctr.innerHTML = ''; // 清空上次內容
 
-        // --- Print ---
-        document.getElementById('printBtn').onclick = () => {
-            const ctr = document.getElementById('print-container'); ctr.innerHTML = '';
-            if(!state.data.length) return alert('無數據');
-            const style = document.createElement('style');
-            style.innerHTML = `@media print { @page { size: ${state.config.pageSize==='custom'?'auto':state.config.pageSize} ${state.config.orientation}; margin: 0; } }`;
-            ctr.appendChild(style);
-            const m = state.config.mode;
-            if(m==='single') printSingle(ctr); else if(m==='group') printGroup(ctr); else if(m==='grid') printGrid(ctr);
-            setTimeout(() => { window.print(); ctr.innerHTML=''; }, 500);
-        };
-        function createPage() { const d=document.createElement('div'); d.className='print-page'; d.style.width=state.config.widthMm+'mm'; d.style.height=state.config.pageSize==='receipt80'?'auto':state.config.heightMm+'mm'; return d; }
-        function createEl(el, row, dx=0, dy=0) {
-            const d=document.createElement('div'); d.className='print-element';
-            d.style.left=(el.x+dx)+'px'; d.style.top=(el.y+dy)+'px'; d.style.width=el.width+'px'; d.style.height=el.height+'px';
-            d.style.fontSize=el.fontSize+'px'; d.style.fontWeight=el.fontWeight; d.style.background=el.backgroundColor; d.style.border=el.border;
-            d.innerText=el.type==='field'&&row?(row[el.fieldName]||''):el.content; return d;
+        if (!state.data.length) {
+            // 如果沒有數據，為了預覽模板效果，我們可以生成一筆假資料
+            // 這樣您在設計時按列印也能看到效果，不用每次都上傳 CSV
+            if (state.elements.length > 0) {
+                 const dummy = {};
+                 state.fields.forEach(f => dummy[f] = `(預覽:${f})`);
+                 // 臨時將 state.data 替換為一筆假資料進行列印，印完還原
+                 const originalData = state.data;
+                 state.data = [dummy];
+                 
+                 runPrintProcess(ctr); // 執行列印
+                 
+                 state.data = originalData; // 還原
+                 return;
+            } else {
+                alert('無數據可列印，請先上傳 CSV/JSON');
+                return;
+            }
         }
-        function printSingle(ctr) { state.data.forEach(r => { const p=createPage(); state.elements.forEach(e=>p.appendChild(createEl(e,r))); ctr.appendChild(p); }); }
-        function printGroup(ctr) {
-            const grp={}; const kf=state.config.groupField; state.data.forEach(r=>{const k=kf?r[kf]:'A'; if(!grp[k])grp[k]=[]; grp[k].push(r);});
-            const hEls=state.elements.filter(e=>e.y<state.config.splitY), dEls=state.elements.filter(e=>e.y>=state.config.splitY);
-            dEls.forEach(e=>e._oy=e.y-state.config.splitY);
-            Object.values(grp).forEach(rs=>{
-                let p=createPage(); ctr.appendChild(p); const rh=()=>hEls.forEach(e=>p.appendChild(createEl(e,rs[0]))); rh();
-                let y=state.config.splitY;
-                rs.forEach(r=>{ if(y+state.config.rowHeight>1050){p=createPage();ctr.appendChild(p);rh();y=state.config.splitY;} dEls.forEach(e=>p.appendChild(createEl(e,r,0,y+e._oy-e.y))); y+=state.config.rowHeight; });
+
+        runPrintProcess(ctr);
+    };
+
+    function runPrintProcess(ctr) {
+        // 動態注入 CSS 以設定正確的紙張大小
+        const style = document.createElement('style');
+        style.innerHTML = `@media print { 
+            @page { 
+                size: ${state.config.pageSize === 'custom' ? 'auto' : state.config.pageSize} ${state.config.orientation}; 
+                margin: 0; 
+            } 
+        }`;
+        ctr.appendChild(style);
+
+        // 根據模式選擇生成函數
+        const m = state.config.mode;
+        if (m === 'single') printSingle(ctr);
+        else if (m === 'group') printGroup(ctr);
+        else if (m === 'grid') printGrid(ctr);
+
+        // 延遲呼叫瀏覽器列印
+        setTimeout(() => {
+            window.print();
+            ctr.innerHTML = '';
+        }, 500);
+    }
+
+    function createPage() {
+        const d = document.createElement('div');
+        d.className = 'print-page';
+        d.style.width = state.config.widthMm + 'mm';
+        // 預設高度，稍後如果是收據模式會被動態覆蓋
+        d.style.height = state.config.pageSize === 'receipt80' ? 'auto' : (state.config.heightMm + 'mm');
+        return d;
+    }
+
+    function createEl(el, row, dx = 0, dy = 0) {
+        const d = document.createElement('div');
+        d.className = 'print-element';
+        // 位置與樣式
+        const finalX = el.x + dx;
+        const finalY = el.y + dy;
+        d.style.left = finalX + 'px';
+        d.style.top = finalY + 'px';
+        d.style.width = el.width + 'px';
+        d.style.height = el.height + 'px';
+        d.style.fontSize = el.fontSize + 'px';
+        d.style.fontWeight = el.fontWeight;
+        d.style.background = el.backgroundColor;
+        d.style.border = el.border;
+        
+        // 內容替換
+        d.innerText = el.type === 'field' && row ? (row[el.fieldName] || '') : el.content;
+        
+        // 回傳元素以及它的底部 Y 座標 (用於計算高度)
+        d.dataset.bottom = finalY + el.height;
+        return d;
+    }
+
+    // 模式 A: 單頁單筆 (修正高度塌陷)
+    function printSingle(ctr) {
+        state.data.forEach(row => {
+            const pg = createPage();
+            let maxBottom = 0;
+
+            state.elements.forEach(el => {
+                const domEl = createEl(el, row);
+                pg.appendChild(domEl);
+                maxBottom = Math.max(maxBottom, parseFloat(domEl.dataset.bottom));
             });
-        }
-        function printGrid(ctr) {
-            const {gridCols,gridRows,gridGapX,gridGapY}=state.config;
-            let maxX=0,maxY=0; state.elements.forEach(e=>{maxX=Math.max(maxX,e.x+e.width);maxY=Math.max(maxY,e.y+e.height);});
-            const cw=maxX+gridGapX, ch=maxY+gridGapY;
-            let p=createPage(); ctr.appendChild(p); let i=0;
-            state.data.forEach(r=>{
-                if(i>=gridCols*gridRows){p=createPage();ctr.appendChild(p);i=0;}
-                const c=i%gridCols, rw=Math.floor(i/gridCols);
-                state.elements.forEach(e=>p.appendChild(createEl(e,r,c*cw,rw*ch))); i++;
+
+            // 修正收據模式高度
+            if (state.config.pageSize === 'receipt80') {
+                pg.style.height = (maxBottom + 20) + 'px';
+            }
+            ctr.appendChild(pg);
+        });
+    }
+
+    // 模式 B: 分組列表 (修正高度塌陷)
+    function printGroup(ctr) {
+        const groups = {};
+        const keyF = state.config.groupField;
+        state.data.forEach(r => {
+            const k = keyF ? r[keyF] : 'ALL';
+            if (!groups[k]) groups[k] = [];
+            groups[k].push(r);
+        });
+
+        const hEls = state.elements.filter(e => e.y < state.config.splitY); 
+        const dEls = state.elements.filter(e => e.y >= state.config.splitY); 
+        dEls.forEach(e => e._oy = e.y - state.config.splitY);
+
+        const pageH = state.config.pageSize === 'receipt80' ? 99999 : 1050; 
+
+        Object.values(groups).forEach(rows => {
+            let pg = createPage();
+            ctr.appendChild(pg);
+            let currentMaxY = 0; // 用來追蹤當前頁面印到了哪裡
+
+            // 渲染表頭
+            const renderHeader = () => hEls.forEach(e => {
+                const domEl = createEl(e, rows[0]);
+                pg.appendChild(domEl);
+                currentMaxY = Math.max(currentMaxY, parseFloat(domEl.dataset.bottom));
             });
-        }
+            renderHeader();
+
+            let y = state.config.splitY;
+
+            rows.forEach(row => {
+                if (y + state.config.rowHeight > pageH) {
+                    pg = createPage();
+                    ctr.appendChild(pg);
+                    renderHeader();
+                    y = state.config.splitY;
+                    currentMaxY = y; // 重置高度追蹤
+                }
+                
+                dEls.forEach(e => {
+                    const elY = y + e._oy - e.y; // 實際列印的 Y 座標
+                    const domEl = createEl(e, row, 0, elY); // 注意這裡的位移邏輯修正
+                    
+                    // 手動修正 createEl 內的計算邏輯，這裡直接給絕對位置比較準確
+                    domEl.style.top = (y + (e.y - state.config.splitY)) + 'px';
+                    domEl.style.left = e.x + 'px';
+                    
+                    pg.appendChild(domEl);
+                    const elBottom = (y + (e.y - state.config.splitY)) + e.height;
+                    currentMaxY = Math.max(currentMaxY, elBottom);
+                });
+                y += state.config.rowHeight;
+            });
+
+            // 關鍵修正：如果是收據模式，強制撐開高度
+            if (state.config.pageSize === 'receipt80') {
+                pg.style.height = (currentMaxY + 50) + 'px'; // +50px 留白
+            }
+        });
+    }
+
+    // 模式 C: 網格/標籤
+    function printGrid(ctr) {
+        const { gridCols, gridRows, gridGapX, gridGapY } = state.config;
+        let maxX = 0, maxY = 0;
+        state.elements.forEach(e => {
+            maxX = Math.max(maxX, e.x + e.width);
+            maxY = Math.max(maxY, e.y + e.height);
+        });
+        const cellW = maxX + gridGapX;
+        const cellH = maxY + gridGapY;
+
+        let pg = createPage();
+        ctr.appendChild(pg);
+        let idx = 0;
+
+        state.data.forEach(row => {
+            if (idx >= gridCols * gridRows) {
+                pg = createPage();
+                ctr.appendChild(pg);
+                idx = 0;
+            }
+            const col = idx % gridCols;
+            const rowIdx = Math.floor(idx / gridCols);
+            const offsetX = col * cellW;
+            const offsetY = rowIdx * cellH;
+
+            state.elements.forEach(el => {
+                pg.appendChild(createEl(el, row, offsetX, offsetY));
+            });
+            idx++;
+        });
+    }
     </script>
 </body>
 </html>
