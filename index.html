@@ -888,22 +888,43 @@
             r.readAsText(f);
         };
         
+        // --- 修正版：匯入並允許微調縮放 ---
         function importLayoutFromJSON(json) {
-            const MM_TO_PX = 3.78; // 轉換係數：1mm 約等於 3.78px
             const cols = json.columns;
+            if (!cols || cols.length === 0) return;
         
-            if (cols.length === 0) return;
+            // 1. 詢問微調參數
+            // 標準 A4 網頁解析度下，1mm 約等於 3.78px
+            // 但因為底圖 PDF 解析度不同，可能需要微調
+            const defaultScale = 3.78; 
+            let scaleStr = prompt(
+                "請確認匯入縮放倍率 (px per mm)：\n" +
+                "● 若表格太小，請將數值改大 (如 4.0)\n" + 
+                "● 若表格太大，請將數值改小 (如 3.5)\n" +
+                "● X 位移：可輸入 '3.78, 10' 代表倍率 3.78 且向右移 10px", 
+                defaultScale
+            );
         
-            // 1. 計算表格起始位置 (X)
-            // 偵測器的 X 是相對於頁面的，我們直接轉換
-            const startX = (cols[0].x || 10) * MM_TO_PX;
-            const startY = 100; // 預設插入在 Y=100 的位置
+            if (scaleStr === null) return; // 取消
         
-            // 2. 轉換欄位資料
-            const columnNames = cols.map(c => c.name || '未命名');
-            const fields = cols.map(c => c.name || ''); // 自動綁定同名欄位
+            // 解析輸入 (支援 "倍率, 位移X, 位移Y")
+            let [scaleInput, offXInput, offYInput] = scaleStr.split(',').map(Number);
             
-            // 3. 轉換寬度 (mm -> px)
+            const MM_TO_PX = scaleInput || defaultScale;
+            const offsetX = offXInput || 0; // 手動 X 修正
+            const offsetY = offYInput || 0; // 手動 Y 修正
+        
+            // 2. 計算起始位置
+            // 偵測器的 X 是 mm，乘上倍率後加上手動修正
+            const startX = ((cols[0].x || 10) * MM_TO_PX) + offsetX;
+            // Y 軸預設放在 100px 處，也可修正
+            const startY = 100 + offsetY; 
+        
+            // 3. 轉換資料與寬度
+            const columnNames = cols.map(c => c.name || '未命名');
+            const fields = cols.map(c => c.name || ''); 
+            
+            // 寬度轉換
             const columnWidths = cols.map(c => Math.round((c.width || 20) * MM_TO_PX));
         
             // 4. 建立表格物件
@@ -915,30 +936,29 @@
                 columns: columnNames,
                 fields: fields,
                 columnWidths: columnWidths,
-                // 預設樣式
+                // 樣式設定
                 rowHeight: 30,
                 headerHeight: 35,
-                headerBg: '#e0e7ff',           // 淡紫色背景
-                headerBorder: '1px solid #6366f1', // 紫色邊框
+                headerBg: '#e0e7ff',
+                headerBorder: '1px solid #6366f1',
                 cellBorder: '1px solid #ccc',
                 fontSize: 12,
                 headerFontWeight: 'bold',
                 mergedCells: [],
-                // 預設全部靠左，除了可能的金額欄位
                 columnAligns: columnNames.map(n => 
                     (n.includes('金') || n.includes('價') || n.includes('數')) ? 'right' : 'left'
                 )
             };
         
-            // 5. 推入狀態並渲染
+            // 5. 插入並渲染
             state.elements.push(newTable);
             renderTableElementAdvanced(newTable);
             
-            // 如果是分組報表模式，自動調整分隔線位置
+            // 6. 如果是 Group 模式，同步調整分隔線
             if (state.config.mode === 'group') {
                 state.config.splitY = startY;
                 updSplit();
-                el('splitY').value = startY;
+                el('splitY').value = Math.round(startY);
             }
         }
     </script>
