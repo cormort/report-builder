@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Report Studio v5.2 - 智能表格旗艦版</title>
+    <title>Pro Report Studio v5.3 - 穩定修復版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <style>
@@ -72,7 +72,7 @@
 </head>
 <body>
     <div class="header">
-        <div style="font-weight: bold;">📊 Pro Report Studio v5.2</div>
+        <div style="font-weight: bold;">📊 Pro Report Studio v5.3</div>
         <div><button class="btn btn-success" id="printBtn">🖨️ 列印 / 匯出</button></div>
     </div>
 
@@ -146,6 +146,9 @@
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px">
                     <div><label class="form-label">欄</label><input type="number" id="gCols" class="form-control" value="2"></div>
                     <div><label class="form-label">列</label><input type="number" id="gRows" class="form-control" value="4"></div>
+                    <!-- 修正：補回間距設定 -->
+                    <div><label class="form-label">間距X</label><input type="number" id="gX" class="form-control" value="10"></div>
+                    <div><label class="form-label">間距Y</label><input type="number" id="gY" class="form-control" value="10"></div>
                 </div>
             </div>
 
@@ -183,7 +186,7 @@
         function closeTableModal() { el('tableModal').style.display = 'none'; }
         function insertTable() { if (currentTableMode === 'smart') insertTableSmart(); else insertTableVirtual(); }
 
-        // === Smart Table Logic (Advanced) ===
+        // === Smart Table Logic ===
         function insertTableSmart() {
             const rows = parseInt(el('tblRows').value) || 2;
             const cols = parseInt(el('tblCols').value) || 3;
@@ -266,7 +269,7 @@
         window.updColW = (id, i, v) => { const t = state.elements.find(e => e.id === id); if(t) { t.columnWidths[i] = Math.max(10, v); el(id).remove(); renderTableElementAdvanced(t); } };
         window.updColA = (id, i, v) => { const t = state.elements.find(e => e.id === id); if(t) { t.columnAligns[i] = v; el(id).remove(); renderTableElementAdvanced(t); } };
 
-        // === Context Menu (Merge/Add/Remove) ===
+        // === Context Menu ===
         function showTableCtxMenu(e, t) {
             document.querySelectorAll('.context-menu').forEach(m => m.remove());
             const m = document.createElement('div'); m.className = 'context-menu';
@@ -293,7 +296,7 @@
             }
         }
 
-        // === Virtual Table Logic (Old) ===
+        // === Virtual Table Logic ===
         function insertTableVirtual() {
             const rows = parseInt(el('tblRows').value) || 2;
             const cols = parseInt(el('tblCols').value) || 3;
@@ -390,6 +393,7 @@
         ['gCols', 'gRows', 'gX', 'gY'].forEach(k => el(k).onchange = (e) => state.config[k] = +e.target.value);
         el('splitY').onchange = (e) => { state.config.splitY = +e.target.value; updSplit(); };
         el('rowH').onchange = (e) => state.config.rowH = +e.target.value;
+        el('grpField').onchange = (e) => state.config.grpF = e.target.value;
         window.autoCalcGrid = () => {
             if (!state.elements.length) return alert('空畫布');
             let mx = 0, my = 0; state.elements.forEach(e => { mx = Math.max(mx, e.x + e.width); my = Math.max(my, e.y + e.height); });
