@@ -349,7 +349,7 @@
             div.style.fontSize = el.fontSize + 'px';
             div.style.fontWeight = el.fontWeight;
             
-            div.innerHTML = `<div class="canvas-element-value">${type === 'field' ? `[${el.content}]` : el.content}</div><div class="resize-handle"></div>`;
+            div.innerHTML = `<div class="canvas-element-value">${el.type === 'field' ? `[${el.content}]` : el.content}</div><div class="resize-handle"></div>`;
             
             // Selection
             div.onmousedown = (e) => {
