@@ -300,7 +300,19 @@
             };
         });
 
-        initCanvas(); initDrag();
+        initCanvas(); 
+        initDrag();
+        // --- 關鍵修復：補上 setPage 函式 ---
+        function setPage(size, orient, mode) {
+            state.config.size = size;
+            state.config.orient = orient;
+            state.config.mode = mode;
+            if(el('pageSize')) el('pageSize').value = size;
+            if(el('orient')) el('orient').value = orient;
+            if(el('mode')) el('mode').value = mode;
+            updSz();
+            updMode();
+        }
 
         // --- Canvas & Layout ---
         function initCanvas() { updSz(); el('pageSize').onchange = (e) => { state.config.size = e.target.value; updSz(); }; el('orient').onchange = (e) => { state.config.orient = e.target.value; updSz(); }; }
