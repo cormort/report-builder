@@ -3,30 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Report Studio v5.5 - 隱私修正版</title>
-    
-    <!-- 修正：加入 crossorigin 與 referrerpolicy 以避免瀏覽器隱私阻擋 -->
+    <title>Pro Report Studio v5.6 - 快速標題版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script>
-        // 設定 Worker 路徑
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    </script>
-
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <style>
         :root { --primary: #2186c4; --bg: #f0f2f5; --surface: #ffffff; --border: #dcdfe6; --highlight: #e6f7ff; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); height: 100vh; display: flex; flex-direction: column; color: #333; }
-        
-        /* Layout */
         .header { background: #2b3a42; color: white; padding: 0 20px; height: 60px; display: flex; justify-content: space-between; align-items: center; }
         .main-layout { display: flex; flex: 1; overflow: hidden; }
         .panel { background: var(--surface); display: flex; flex-direction: column; border-right: 1px solid var(--border); }
-        .left-panel { width: 260px; padding: 15px; overflow-y: auto; }
+        .left-panel { width: 280px; padding: 15px; overflow-y: auto; }
         .center-panel { flex: 1; background: #525659; position: relative; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow: auto; }
         .right-panel { width: 320px; padding: 15px; overflow-y: auto; border-left: 1px solid var(--border); }
         .panel-title { font-size: 14px; font-weight: bold; color: #666; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
-        
-        /* UI Components */
         .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; background: #e0e0e0; display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: 0.2s; }
         .btn:hover { background: #d0d0d0; }
         .btn-primary { background: var(--primary); color: white; }
@@ -36,12 +26,11 @@
         .form-group { margin-bottom: 10px; }
         .form-label { font-size: 12px; color: #666; display: block; margin-bottom: 3px; }
         .form-control { width: 100%; padding: 5px; border: 1px solid var(--border); font-size: 13px; }
-        
         .upload-area { border: 2px dashed var(--border); padding: 15px; text-align: center; cursor: pointer; font-size: 13px; margin-bottom: 10px; color: #666; }
         .field-item { padding: 5px 8px; background: #f4f4f5; border: 1px solid #e9e9eb; margin-bottom: 4px; cursor: grab; font-size: 12px; user-select: none; }
         .field-item:hover { background: var(--highlight); border-color: var(--primary); }
-        
-        /* Canvas */
+        .tag-item { display: inline-block; padding: 4px 8px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 12px; font-size: 12px; margin: 2px; cursor: grab; color: #2e7d32; }
+        .tag-item:hover { background: #c8e6c9; }
         .canvas-wrapper { box-shadow: 0 0 20px rgba(0,0,0,0.5); margin: auto; transition: 0.3s; }
         .canvas { background: white; position: relative; overflow: hidden; transform-origin: top center; background-image: linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px); background-size: 20px 20px; }
         .canvas-element { position: absolute; cursor: move; display: flex; align-items: center; overflow: hidden; border: 1px dashed #ccc; box-sizing: border-box; }
@@ -50,24 +39,15 @@
         .resize-handle { position: absolute; bottom: 0; right: 0; width: 8px; height: 8px; background: var(--primary); cursor: nwse-resize; display: none; }
         .canvas-element.selected .resize-handle { display: block; }
         #splitLine { position: absolute; left: 0; width: 100%; height: 0; border-top: 2px dashed #f56c6c; z-index: 90; cursor: ns-resize; display: none; }
-        
-        /* Table Styles */
         .table-element { display: block !important; overflow: visible !important; border: none !important; background: transparent !important; }
         .col-resizer:hover { opacity: 1 !important; background: var(--primary) !important; }
-        
-        /* Drop Zones Highlight */
-        .drop-active { background-color: #e6f7ff !important; border: 2px dashed var(--primary) !important; }
         .prop-col-item { transition: 0.2s; border: 1px solid transparent; }
         .prop-col-item.drag-over { border-color: var(--primary); background: #e6f7ff; }
-
-        /* Context Menu & Modal */
         .context-menu { position: fixed; background: white; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 12px rgba(0,0,0,0.2); z-index: 9999; min-width: 150px; overflow: hidden; }
         .context-menu div { padding: 8px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f0f0f0; color: #333; }
         .context-menu div:hover { background: #f5f5f5; color: var(--primary); }
         .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; }
         .modal { background: white; padding: 20px; border-radius: 8px; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-
-        /* Print */
         #print-container { display: none; }
         @media print {
             @page { margin: 0; }
@@ -82,7 +62,7 @@
 </head>
 <body>
     <div class="header">
-        <div style="font-weight: bold;">📊 Pro Report Studio v5.5</div>
+        <div style="font-weight: bold;">📊 Pro Report Studio v5.6</div>
         <div><button class="btn btn-success" id="printBtn">🖨️ 列印 / 匯出</button></div>
     </div>
 
@@ -108,7 +88,12 @@
                 <button class="btn" onclick="addElement('text','',50,50,2,100,12,'normal','#000','none')" title="直線">┃</button>
             </div>
 
-            <div class="panel-title" style="margin-top:10px">4. 欄位 (可拖曳)</div>
+            <div class="panel-title" style="margin-top:10px">4. 快速標題 (貼上文字)</div>
+            <textarea id="quickTextInput" class="form-control" rows="2" placeholder="貼上: 品名 規格 數量 單價"></textarea>
+            <button class="btn btn-block" style="margin-top:5px" onclick="parseQuickText()">✂️ 切分並產生標籤</button>
+            <div id="quickTextList" style="margin-top:5px; min-height:30px; border:1px dashed #eee; padding:5px;"></div>
+
+            <div class="panel-title" style="margin-top:10px">5. 欄位 (可拖曳)</div>
             <div id="fieldList" style="min-height:100px;"></div>
         </div>
 
@@ -122,7 +107,6 @@
                 </div>
             </div>
             
-            <!-- Table Modal -->
             <div class="modal-overlay" id="tableModal">
                 <div class="modal">
                     <h3 id="modalTitle" style="margin-bottom:15px">插入表格</h3>
@@ -186,6 +170,20 @@
             el('canvas').style.minHeight = state.config.size === 'receipt80' ? '150mm' : '0';
         }
 
+        // --- Quick Text Logic (NEW) ---
+        function parseQuickText() {
+            const txt = el('quickTextInput').value;
+            if(!txt.trim()) return;
+            const items = txt.split(/[\s,]+/).filter(t => t.trim()); // Split by space, tab, comma
+            el('quickTextList').innerHTML = items.map(t => 
+                `<div class="tag-item" draggable="true" ondragstart="dragQuickText(event, '${t}')">${t}</div>`
+            ).join('');
+        }
+        window.dragQuickText = (e, val) => {
+            e.dataTransfer.setData('type', 'text-replace');
+            e.dataTransfer.setData('val', val);
+        };
+
         // --- Table Wizard ---
         function openTableModal(mode) {
             currentTableMode = mode || 'smart';
@@ -232,8 +230,7 @@
             // Data
             html += `<div style="display:flex; height:${table.rowHeight}px;">`;
             table.fields.forEach((f, i) => { 
-                // Add drop target class
-                html += `<div class="table-cell-drop" data-col="${i}" style="width:${table.columnWidths[i]}px; border:${table.cellBorder}; padding:5px; font-size:${table.fontSize}px; text-align:${table.columnAligns[i]}; color:#666; overflow:hidden; box-sizing:border-box;">[${f||'拖曳欄位至此'}]</div>`; 
+                html += `<div class="table-cell-drop" data-col="${i}" style="width:${table.columnWidths[i]}px; border:${table.cellBorder}; padding:5px; font-size:${table.fontSize}px; text-align:${table.columnAligns[i]}; color:#666; overflow:hidden; box-sizing:border-box;">[${f||'拖曳欄位'}]</div>`; 
             });
             html += '</div></div>';
             
@@ -241,7 +238,6 @@
             d.onmouseenter = () => d.querySelectorAll('.col-resizer').forEach(r => r.style.opacity = '1');
             d.onmouseleave = () => d.querySelectorAll('.col-resizer').forEach(r => r.style.opacity = '0');
             
-            // Resizer Logic
             d.querySelectorAll('.col-resizer').forEach(r => {
                 r.onmousedown = (e) => {
                     e.stopPropagation(); const ci = +r.dataset.col, sx = e.clientX, sw = table.columnWidths[ci];
@@ -251,7 +247,6 @@
                 };
             });
 
-            // ★★★ Canvas Drop Logic (Direct to Table Cell) ★★★
             d.querySelectorAll('.table-cell-drop').forEach(cell => {
                 cell.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); cell.style.background = '#e6f7ff'; });
                 cell.addEventListener('dragleave', (e) => { e.stopPropagation(); cell.style.background = 'transparent'; });
@@ -259,10 +254,7 @@
                     e.preventDefault(); e.stopPropagation();
                     const type = e.dataTransfer.getData('type');
                     const val = e.dataTransfer.getData('val');
-                    if (type === 'field') {
-                        const colIdx = parseInt(cell.dataset.col);
-                        updateTableField(table.id, colIdx, val);
-                    }
+                    if (type === 'field') updateTableField(table.id, parseInt(cell.dataset.col), val);
                     cell.style.background = 'transparent';
                 });
             });
@@ -290,7 +282,7 @@
                     <div class="form-group"><label>字體</label><input type="number" class="form-control" value="${t.fontSize}" oninput="updTbl('${t.id}','fontSize',+this.value)"></div>
                     <div class="form-group"><label>背景</label><input type="color" class="form-control" value="${t.headerBg}" oninput="updTbl('${t.id}','headerBg',this.value)"></div>
                     <div class="form-group"><label>邊框</label><select class="form-control" onchange="updTbl('${t.id}','cellBorder',this.value)"><option value="none">無</option><option value="1px solid #999">細線</option><option value="2px solid #333">粗線</option></select></div>
-                    <div class="panel-title">欄位微調 (可拖曳欄位至此)</div>
+                    <div class="panel-title">欄位微調 (可拖曳欄位/文字)</div>
                     ${t.columns.map((c,i)=>`
                         <div class="prop-col-item" style="background:#f5f5f5;padding:8px;margin-bottom:5px;border-radius:4px;" 
                              ondragover="allowDrop(event, this)" ondragleave="leaveDrop(this)" ondrop="dropToProp(event, '${t.id}', ${i}, this)">
@@ -300,14 +292,13 @@
                                 <select onchange="updColA('${t.id}',${i},this.value)"><option value="left" ${t.columnAligns[i]=='left'?'selected':''}>左</option><option value="center" ${t.columnAligns[i]=='center'?'selected':''}>中</option><option value="right" ${t.columnAligns[i]=='right'?'selected':''}>右</option></select>
                             </div>
                             <div style="font-size:12px;color:#2186c4;border:1px dashed #ccc;padding:2px;background:white;">
-                                🔗 ${t.fields[i] || '未綁定 (拖曳至此)'}
+                                🔗 ${t.fields[i] || '未綁定'}
                             </div>
                         </div>`).join('')}
                     <button class="btn btn-danger btn-block" onclick="delEl('${t.id}')">刪除表格</button>
                 </div>`;
         }
         
-        // ★★★ Right Panel Drop Logic ★★★
         window.allowDrop = (e, el) => { e.preventDefault(); el.classList.add('drag-over'); };
         window.leaveDrop = (el) => { el.classList.remove('drag-over'); };
         window.dropToProp = (e, id, idx, el) => {
@@ -315,12 +306,14 @@
             const type = e.dataTransfer.getData('type');
             const val = e.dataTransfer.getData('val');
             if (type === 'field') updateTableField(id, idx, val);
+            else if (type === 'text-replace') updateTableColumnName(id, idx, val);
         };
 
         window.updTbl = (id, k, v) => { const t = state.elements.find(e => e.id === id); if(t) { t[k] = v; el(id).remove(); renderTableElementAdvanced(t); } };
         window.updColW = (id, i, v) => { const t = state.elements.find(e => e.id === id); if(t) { t.columnWidths[i] = Math.max(10, v); el(id).remove(); renderTableElementAdvanced(t); } };
         window.updColA = (id, i, v) => { const t = state.elements.find(e => e.id === id); if(t) { t.columnAligns[i] = v; el(id).remove(); renderTableElementAdvanced(t); } };
         window.updateTableField = (id, i, f) => { const t = state.elements.find(e => e.id === id); if(t) { t.fields[i] = f; el(id).remove(); renderTableElementAdvanced(t); renderTableProps(t); } };
+        window.updateTableColumnName = (id, i, n) => { const t = state.elements.find(e => e.id === id); if(t) { t.columns[i] = n; el(id).remove(); renderTableElementAdvanced(t); renderTableProps(t); } };
 
         // === Context Menu ===
         function showTableCtxMenu(e, t) {
