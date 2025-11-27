@@ -3,9 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Report Studio v5.4 - 直覺拖曳版</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    <title>Pro Report Studio v5.5 - 隱私修正版</title>
+    
+    <!-- 修正：加入 crossorigin 與 referrerpolicy 以避免瀏覽器隱私阻擋 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        // 設定 Worker 路徑
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+
     <style>
         :root { --primary: #2186c4; --bg: #f0f2f5; --surface: #ffffff; --border: #dcdfe6; --highlight: #e6f7ff; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -76,7 +82,7 @@
 </head>
 <body>
     <div class="header">
-        <div style="font-weight: bold;">📊 Pro Report Studio v5.4</div>
+        <div style="font-weight: bold;">📊 Pro Report Studio v5.5</div>
         <div><button class="btn btn-success" id="printBtn">🖨️ 列印 / 匯出</button></div>
     </div>
 
