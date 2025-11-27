@@ -159,7 +159,14 @@
                     </div>
                     <div id="fileInfo" style="margin-top:8px; color:#10b981; font-weight:500; font-size:12px; text-align:center;"></div>
                 </div>
-
+                <div class="form-group">
+                    <div class="upload-area" id="layoutBtn" style="border-color: #8b5cf6; background: rgba(139,92,246,0.05);">
+                        <span class="material-symbols-outlined" style="font-size:36px;color:#8b5cf6">dashboard_customize</span>
+                        <div style="margin-top:8px">匯入表格結構 (JSON)</div>
+                        <div style="font-size:11px;color:#666;margin-top:4px">來自 PDF 偵測器的 export.json</div>
+                        <input type="file" id="layoutFile" hidden accept=".json">
+                    </div>
+                </div>
                 <div class="form-group">
                     <div class="upload-area" id="pdfBtn">
                         <span class="material-symbols-outlined" style="font-size:36px;color:var(--primary)">picture_as_pdf</span>
@@ -845,6 +852,94 @@
             const sx = Math.max(20, (pW - tW) / 2), sy = Math.max(20, (pH - tH) / 2);
             let p = mkPg(), i = 0;
             state.data.forEach(r => { if (i >= gC * gR) { p = mkPg(); c.appendChild(p); i = 0; } const col = i % gC, row = Math.floor(i / gC); state.elements.forEach(e => p.appendChild(mkEl(e, r, sx + col * cW, sy + row * cH))); i++; });
+        }
+
+        // --- 新增：匯入 PDF 表格結構邏輯 ---
+        el('layoutBtn').onclick = () => {
+            el('layoutFile').value = '';
+            el('layoutFile').click();
+        };
+        
+        el('layoutFile').onchange = (e) => {
+            const f = e.target.files[0];
+            if (!f) return;
+        
+            const r = new FileReader();
+            r.onload = (ev) => {
+                try {
+                    const json = JSON.parse(ev.target.result);
+                    
+                    // 檢查格式是否正確
+                    if (!json.columns || !Array.isArray(json.columns)) {
+                        alert('格式錯誤：請上傳由 PDF 表格偵測器匯出的 JSON 檔案');
+                        return;
+                    }
+        
+                    importLayoutFromJSON(json);
+                    
+                    // 自動切換到元件分頁以查看結果
+                    document.querySelector('[data-tab="tab3"]').click(); // 或是留在當前頁面
+                    alert('✅ 表格結構已成功匯入！');
+                } catch (err) {
+                    alert('解析失敗：' + err.message);
+                    console.error(err);
+                }
+            };
+            r.readAsText(f);
+        };
+        
+        function importLayoutFromJSON(json) {
+            const MM_TO_PX = 3.78; // 轉換係數：1mm 約等於 3.78px
+            const cols = json.columns;
+        
+            if (cols.length === 0) return;
+        
+            // 1. 計算表格起始位置 (X)
+            // 偵測器的 X 是相對於頁面的，我們直接轉換
+            const startX = (cols[0].x || 10) * MM_TO_PX;
+            const startY = 100; // 預設插入在 Y=100 的位置
+        
+            // 2. 轉換欄位資料
+            const columnNames = cols.map(c => c.name || '未命名');
+            const fields = cols.map(c => c.name || ''); // 自動綁定同名欄位
+            
+            // 3. 轉換寬度 (mm -> px)
+            const columnWidths = cols.map(c => Math.round((c.width || 20) * MM_TO_PX));
+        
+            // 4. 建立表格物件
+            const newTable = {
+                id: 'el-imported-' + Math.random().toString(36).substr(2, 9),
+                type: 'table',
+                x: startX,
+                y: startY,
+                columns: columnNames,
+                fields: fields,
+                columnWidths: columnWidths,
+                // 預設樣式
+                rowHeight: 30,
+                headerHeight: 35,
+                headerBg: '#e0e7ff',           // 淡紫色背景
+                headerBorder: '1px solid #6366f1', // 紫色邊框
+                cellBorder: '1px solid #ccc',
+                fontSize: 12,
+                headerFontWeight: 'bold',
+                mergedCells: [],
+                // 預設全部靠左，除了可能的金額欄位
+                columnAligns: columnNames.map(n => 
+                    (n.includes('金') || n.includes('價') || n.includes('數')) ? 'right' : 'left'
+                )
+            };
+        
+            // 5. 推入狀態並渲染
+            state.elements.push(newTable);
+            renderTableElementAdvanced(newTable);
+            
+            // 如果是分組報表模式，自動調整分隔線位置
+            if (state.config.mode === 'group') {
+                state.config.splitY = startY;
+                updSplit();
+                el('splitY').value = startY;
+            }
         }
     </script>
 </body>
