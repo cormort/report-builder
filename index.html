@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Report Studio v6.9 - 拖曳修復版</title>
+    <title>Pro Report Studio v7.0 - 範例速成版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Material+Symbols+Outlined" rel="stylesheet">
@@ -11,6 +11,7 @@
         :root {
             --primary: #6366f1; --primary-light: #818cf8; --bg: #0f172a; --surface: #1e293b; --surface2: #334155;
             --border: #475569; --text: #e2e8f0; --text-secondary: #94a3b8; --success: #10b981; --danger: #ef4444;
+            --demo-color: #8b5cf6; /* 紫色系，呼應說明檔 */
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
@@ -19,8 +20,7 @@
         /* Header */
         .header { height: 56px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 20px; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
         .header .title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
-        .header .actions { margin-left: auto; }
-
+        
         /* Layout */
         .main-layout { flex: 1; display: flex; overflow: hidden; }
         .left-panel { width: 280px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
@@ -33,11 +33,14 @@
         /* Components */
         .btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; background: var(--surface2); color: var(--text); }
         .btn:hover { background: #475569; transform: translateY(-1px); }
-        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(99,102,241,0.4); }
         .btn-success { background: var(--success); color: white; }
         .btn-danger { background: var(--danger); color: white; }
+        .btn-demo { background: var(--demo-color); color: white; width: 100%; justify-content: flex-start; margin-bottom: 8px; text-align: left; padding: 10px 12px; }
+        .btn-demo:hover { background: #7c3aed; box-shadow: 0 4px 12px rgba(139,92,246,0.4); }
         .btn-sm { padding: 6px 12px; font-size: 12px; }
         .btn-block { width: 100%; }
+        
         .form-group { margin-bottom: 14px; }
         .form-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; display: block; }
         .form-control { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface2); color: var(--text); font-size: 13px; }
@@ -49,7 +52,6 @@
         .center-panel { flex: 1; background: #1e293b; position: relative; display: flex; flex-direction: column; overflow: hidden; }
         .canvas-wrapper { flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px; overflow: auto; }
         .canvas { background: white; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.6); border-radius: 4px; overflow: hidden; transform-origin: top center; background-image: linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px); background-size: 20px 20px; }
-        
         .canvas-element { position: absolute; border: 1px dashed #94a3b8; background: rgba(99,102,241,0.05); border-radius: 4px; cursor: move; display: flex; align-items: center; box-sizing: border-box; color: #333; user-select: none; }
         .canvas-element.selected { border: 2px solid var(--primary); background: rgba(99,102,241,0.15); z-index: 100; }
         .canvas-element-value { pointer-events: none; width: 100%; padding: 2px; overflow: hidden; white-space: nowrap; }
@@ -100,7 +102,7 @@
     <div class="header">
         <div class="title">
             <span class="material-symbols-outlined" style="font-size:28px;color:var(--primary)">auto_fix_high</span>
-            Pro Report Studio <small style="opacity:0.7;margin-left:8px;font-weight:400;font-size:12px">v6.9 拖曳修復版</small>
+            Pro Report Studio <small style="opacity:0.7;margin-left:8px;font-weight:400;font-size:12px">v7.0 範例速成版</small>
         </div>
         <div class="actions">
             <button class="btn btn-success" id="printBtn">
@@ -110,14 +112,45 @@
     </div>
 
     <div class="main-layout">
+        <!-- 左側工具欄 -->
         <div class="left-panel">
             <div class="tab-nav">
-                <div class="tab-btn active" data-tab="tab1"><span class="material-symbols-outlined">dataset</span><div>資料</div></div>
-                <div class="tab-btn" data-tab="tab2"><span class="material-symbols-outlined">widgets</span><div>元件</div></div>
-                <div class="tab-btn" data-tab="tab3"><span class="material-symbols-outlined">bolt</span><div>快速</div></div>
+                <div class="tab-btn active" data-tab="tab1"><span class="material-symbols-outlined">rocket_launch</span><div>速成</div></div>
+                <div class="tab-btn" data-tab="tab2"><span class="material-symbols-outlined">dataset</span><div>資料</div></div>
+                <div class="tab-btn" data-tab="tab3"><span class="material-symbols-outlined">widgets</span><div>元件</div></div>
             </div>
 
+            <!-- Tab 1: 速成範例 (New) -->
             <div id="tab1" class="tab-content active">
+                <div style="margin-bottom:15px; font-size:13px; color:var(--text-secondary)">
+                    點擊下方按鈕，自動載入<br><b>「範例資料 + 版面設計 + 設定」</b>
+                </div>
+                
+                <button class="btn btn-demo" onclick="loadDemo('invoice')">
+                    <span class="material-symbols-outlined">receipt_long</span> 三聯式發票 / 收據
+                </button>
+                <button class="btn btn-demo" onclick="loadDemo('label')">
+                    <span class="material-symbols-outlined">label</span> 標籤貼紙 (一頁多張)
+                </button>
+                <button class="btn btn-demo" onclick="loadDemo('shipping')">
+                    <span class="material-symbols-outlined">local_shipping</span> 出貨單 (依客戶分組)
+                </button>
+                <button class="btn btn-demo" onclick="loadDemo('receipt')">
+                    <span class="material-symbols-outlined">receipt</span> 80mm 熱感小票
+                </button>
+
+                <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:15px;">
+                    <div style="font-weight:600; margin-bottom:10px; color:var(--primary-light)">快速標題工具</div>
+                    <textarea id="quickTextInput" class="form-control" rows="3" placeholder="貼上欄位：品名 規格 數量 單價 金額"></textarea>
+                    <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="parseQuickText()">
+                        <span class="material-symbols-outlined">content_cut</span> 切分並產生標籤
+                    </button>
+                    <div id="quickTextList" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;"></div>
+                </div>
+            </div>
+
+            <!-- Tab 2: 資料 -->
+            <div id="tab2" class="tab-content">
                 <div class="form-group">
                     <div class="upload-area" id="dataBtn">
                         <span class="material-symbols-outlined" style="font-size:36px;color:#10b981">upload_file</span>
@@ -126,6 +159,7 @@
                     </div>
                     <div id="fileInfo" style="margin-top:8px; color:#10b981; font-weight:500; font-size:12px; text-align:center;"></div>
                 </div>
+
                 <div class="form-group">
                     <div class="upload-area" id="pdfBtn">
                         <span class="material-symbols-outlined" style="font-size:36px;color:var(--primary)">picture_as_pdf</span>
@@ -133,13 +167,15 @@
                         <input type="file" id="pdfFile" hidden accept=".pdf">
                     </div>
                 </div>
+
                 <div style="margin-top:20px">
                     <div style="font-weight:600; margin-bottom:12px; color:var(--primary-light); font-size:13px;">欄位列表 (可拖曳)</div>
                     <div id="fieldList"></div>
                 </div>
             </div>
 
-            <div id="tab2" class="tab-content">
+            <!-- Tab 3: 元件 -->
+            <div id="tab3" class="tab-content">
                 <button class="btn btn-primary btn-block" style="margin-bottom:12px" onclick="openTableModal('smart')">
                     <span class="material-symbols-outlined">table_view</span> 插入智能表格
                 </button>
@@ -152,28 +188,20 @@
                     <button class="btn btn-danger" onclick="if(confirm('確定清空？')){state.elements=[];el('canvas').innerHTML='<div id=splitLine></div>';}"><span class="material-symbols-outlined">delete_sweep</span> 清空</button>
                 </div>
             </div>
-
-            <div id="tab3" class="tab-content">
-                <div class="form-group">
-                    <label class="form-label">快速標題 (貼上文字)</label>
-                    <textarea id="quickTextInput" class="form-control" rows="3" placeholder="貼上欄位：品名 規格 數量 單價 金額"></textarea>
-                </div>
-                <button class="btn btn-primary btn-block" style="margin-bottom:12px" onclick="parseQuickText()">
-                    <span class="material-symbols-outlined">content_cut</span> 切分並產生標籤
-                </button>
-                <div id="quickTextList" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
-            </div>
         </div>
 
+        <!-- 中間畫布 -->
         <div class="center-panel">
             <div style="position:absolute; top:10px; right:10px; z-index:10;">
                 <button class="btn btn-danger btn-sm" id="clearBgBtn" style="display:none">🗑️ 清除背景</button>
             </div>
             <div class="canvas-wrapper">
                 <div class="canvas" id="canvas" style="width:210mm; height:297mm;">
-                    <div id="splitLine" style="top:150px;"></div>
+                    <div id="splitLine" style="top:150px;display:none;"></div>
                 </div>
             </div>
+
+            <!-- 浮動工具列 -->
             <div class="floating-toolbar" id="floatBar">
                 <button class="btn btn-sm" onclick="duplicateSelected()" title="複製"><span class="material-symbols-outlined">content_copy</span></button>
                 <button class="btn btn-sm" onclick="delEl(state.selected.id)" title="刪除"><span class="material-symbols-outlined">delete</span></button>
@@ -182,6 +210,7 @@
             </div>
         </div>
 
+        <!-- 右側屬性面板 -->
         <div class="right-panel">
             <div class="panel-title">版面設定</div>
             <div class="form-group">
@@ -233,6 +262,7 @@
         </div>
     </div>
     
+    <!-- Table Modal -->
     <div class="modal-overlay" id="tableModal">
         <div class="modal">
             <h3 id="modalTitle" style="margin-bottom:15px; font-size:18px; font-weight:700; color:var(--text)">插入表格</h3>
@@ -276,6 +306,128 @@
             el('canvas').style.height = state.config.size === 'receipt80' ? 'auto' : h + 'mm';
             el('canvas').style.minHeight = state.config.size === 'receipt80' ? '150mm' : '0';
         }
+
+        // --- Demo Loader (NEW) ---
+        window.loadDemo = (type) => {
+            if(!confirm('這將清除當前畫布與資料，載入範例？')) return;
+            
+            state.elements = [];
+            el('canvas').innerHTML = '<div id="splitLine"></div>';
+            
+            let demoData = [];
+            
+            if (type === 'invoice') {
+                // 三聯式發票範例
+                demoData = [
+                    {統編:'10622345', 客戶名稱:'台灣科技股份有限公司', 發票號碼:'AB12345678', 日期:'2025/01/15', 品名:'原子筆', 規格:'藍色', 數量:'10', 單價:'15', 金額:'150'},
+                    {統編:'10622345', 客戶名稱:'台灣科技股份有限公司', 發票號碼:'AB12345678', 日期:'2025/01/15', 品名:'A4影印紙', 規格:'80磅', 數量:'2', 單價:'450', 金額:'900'}
+                ];
+                setPage('a4', 'portrait', 'group');
+                addElement('title', '電子計算機統一發票', 250, 30, 300, 30, 22, 'bold');
+                addElement('text', '買受人：', 40, 90, 60, 25, 12, 'bold');
+                addElement('field', '客戶名稱', 100, 90, 200, 25, 12, 'normal', '#eee', '1px solid #999');
+                addElement('text', '統一編號：', 500, 90, 80, 25, 12, 'bold');
+                addElement('field', '統編', 580, 90, 150, 25, 12, 'normal', '#eee', '1px solid #999');
+                
+                // Smart Table
+                const tbl = {
+                    id: 'el-demo-tbl', type: 'table', x: 40, y: 140,
+                    columns: ['品名', '規格', '數量', '單價', '金額'],
+                    fields: ['品名', '規格', '數量', '單價', '金額'],
+                    columnWidths: [200, 100, 80, 100, 100],
+                    rowHeight: 30, headerHeight: 35, headerBg: '#f0f0f0', headerBorder: '2px solid #333', cellBorder: '1px solid #999',
+                    fontSize: 12, headerFontWeight: 'bold', mergedCells: [], columnAligns: ['left','left','center','right','right']
+                };
+                state.elements.push(tbl);
+                renderTableElementAdvanced(tbl);
+                
+                state.config.splitY = 140;
+                updSplit();
+            }
+            else if (type === 'label') {
+                // 標籤貼紙範例
+                demoData = [
+                    {品名:'原子筆', 條碼:'4712345678901', 售價:'15'},
+                    {品名:'A4影印紙', 條碼:'4712345678902', 售價:'450'},
+                    {品名:'滑鼠墊', 條碼:'4712345678903', 售價:'280'},
+                    {品名:'USB隨身碟', 條碼:'4712345678904', 售價:'599'}
+                ];
+                setPage('a4', 'portrait', 'grid');
+                state.config.gC = 2; state.config.gR = 4;
+                el('gCols').value = 2; el('gRows').value = 4;
+                
+                addElement('text', '', 0, 0, 350, 200, 12, 'normal', 'transparent', '2px solid #ccc');
+                addElement('title', '產品標籤', 20, 20, 150, 30, 16, 'bold');
+                addElement('text', '品名:', 20, 60, 50, 25, 12, 'bold');
+                addElement('field', '品名', 80, 60, 200, 25, 14, 'bold', '#eee');
+                addElement('text', '售價: $', 20, 100, 60, 25, 12, 'bold');
+                addElement('field', '售價', 80, 100, 100, 25, 14, 'normal', '#eee');
+                addElement('text', '||||||||||||||||||||', 20, 140, 200, 30, 20, 'normal'); // Fake barcode
+            }
+            else if (type === 'shipping') {
+                // 出貨單範例
+                demoData = [
+                    {業務:'阿明', 客戶名稱:'台灣科技', 品名:'原子筆', 數量:'10', 單價:'15', 金額:'150', 日期:'2025/01/15'},
+                    {業務:'阿明', 客戶名稱:'台灣科技', 品名:'A4紙', 數量:'2', 單價:'450', 金額:'900', 日期:'2025/01/15'},
+                    {業務:'小花', 客戶名稱:'個人戶', 品名:'滑鼠墊', 數量:'1', 單價:'280', 金額:'280', 日期:'2025/01/16'}
+                ];
+                setPage('a4', 'portrait', 'group');
+                state.config.grpF = '客戶名稱';
+                
+                addElement('title', '出貨單', 20, 20, 200, 40, 24, 'bold');
+                addElement('text', '客戶:', 20, 70, 50, 25, 12, 'bold');
+                addElement('field', '客戶名稱', 80, 70, 200, 25, 12, 'normal', '#eee');
+                addElement('text', '業務:', 300, 70, 50, 25, 12, 'bold');
+                addElement('field', '業務', 360, 70, 100, 25, 12, 'normal', '#eee');
+                
+                const tbl = {
+                    id: 'el-demo-ship', type: 'table', x: 20, y: 110,
+                    columns: ['品名', '數量', '單價', '金額'],
+                    fields: ['品名', '數量', '單價', '金額'],
+                    columnWidths: [250, 80, 100, 100],
+                    rowHeight: 30, headerHeight: 35, headerBg: '#e0e7ff', headerBorder: '1px solid #6366f1', cellBorder: '1px solid #ccc',
+                    fontSize: 12, headerFontWeight: 'bold', mergedCells: [], columnAligns: ['left','center','right','right']
+                };
+                state.elements.push(tbl);
+                renderTableElementAdvanced(tbl);
+                
+                state.config.splitY = 110;
+                updSplit();
+            }
+            else if (type === 'receipt') {
+                // 收據範例
+                demoData = [
+                    {品名:'原子筆', 數量:'10', 單價:'15', 金額:'150'},
+                    {品名:'A4影印紙', 數量:'2', 單價:'450', 金額:'900'}
+                ];
+                setPage('receipt80', 'portrait', 'group');
+                addElement('title', '歡迎光臨', 10, 10, 200, 30, 16, 'bold');
+                addElement('text', '--------------------------', 0, 40, 250, 20);
+                
+                const tbl = {
+                    id: 'el-demo-rec', type: 'table', x: 0, y: 60,
+                    columns: ['品名', '數量', '金額'],
+                    fields: ['品名', '數量', '金額'],
+                    columnWidths: [120, 50, 80],
+                    rowHeight: 25, headerHeight: 25, headerBg: 'transparent', headerBorder: 'none', cellBorder: 'none',
+                    fontSize: 11, headerFontWeight: 'bold', mergedCells: [], columnAligns: ['left','center','right']
+                };
+                state.elements.push(tbl);
+                renderTableElementAdvanced(tbl);
+                
+                state.config.splitY = 60;
+                updSplit();
+            }
+
+            // Load Data
+            state.data = demoData;
+            state.fields = Object.keys(demoData[0]);
+            renderFields();
+            el('fileInfo').innerText = `✅ 已載入範例資料 (${state.data.length} 筆)`;
+            
+            // Switch to Data Tab to show fields
+            document.querySelector('[data-tab="tab1"]').click();
+        };
 
         // --- Quick Text Logic ---
         function parseQuickText() {
@@ -347,7 +499,7 @@
             
             d.querySelectorAll('.col-resizer').forEach(r => {
                 r.onmousedown = (e) => {
-                    e.preventDefault(); e.stopPropagation(); const ci = +r.dataset.col, sx = e.clientX, sw = table.columnWidths[ci];
+                    e.stopPropagation(); const ci = +r.dataset.col, sx = e.clientX, sw = table.columnWidths[ci];
                     const mv = (ev) => { table.columnWidths[ci] = Math.max(20, sw + (ev.clientX - sx)); d.remove(); renderTableElementAdvanced(table); };
                     const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); renderTableProps(table); };
                     document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
@@ -366,20 +518,14 @@
                 });
             });
 
-            d.onmousedown = (e) => { 
-                if(e.target.classList.contains('col-resizer'))return; 
-                e.preventDefault(); // ★★★ 關鍵修正：防止瀏覽器預設拖曳行為 ★★★
-                e.stopPropagation(); 
-                selEl(table); 
-                dragTable(e, table, d); 
-            };
+            d.onmousedown = (e) => { if(e.target.classList.contains('col-resizer'))return; e.stopPropagation(); selEl(table); dragTable(e, table, d); };
             d.oncontextmenu = (e) => { e.preventDefault(); showTableCtxMenu(e, table); };
             el('canvas').appendChild(d);
         }
 
         function dragTable(e, table, d) {
             const sx = e.clientX, sy = e.clientY, stX = table.x, stY = table.y;
-            const mv = (ev) => { table.x = stX + (ev.clientX - sx); table.y = stY + (ev.clientY - sy); d.style.left = table.x + 'px'; d.style.top = table.y + 'px'; updateFloatBar(); };
+            const mv = (ev) => { table.x = stX + (ev.clientX - sx); table.y = stY + (ev.clientY - sy); d.style.left = table.x + 'px'; d.style.top = table.y + 'px'; };
             const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); };
             document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
         }
@@ -389,11 +535,11 @@
             const totalW = t.columnWidths.reduce((a, b) => a + b, 0);
             el('props').innerHTML = `
                 <div class="panel-title">表格設定 (寬:${totalW}px)</div>
-                <div class="form-group"><label class="form-label">表頭高</label><input type="number" class="form-control" value="${t.headerHeight}" oninput="updTbl('${t.id}','headerHeight',+this.value)"></div>
-                <div class="form-group"><label class="form-label">列高</label><input type="number" class="form-control" value="${t.rowHeight}" oninput="updTbl('${t.id}','rowHeight',+this.value)"></div>
-                <div class="form-group"><label class="form-label">字體</label><input type="number" class="form-control" value="${t.fontSize}" oninput="updTbl('${t.id}','fontSize',+this.value)"></div>
-                <div class="form-group"><label class="form-label">背景</label><input type="color" class="form-control" style="height:40px" value="${t.headerBg}" oninput="updTbl('${t.id}','headerBg',this.value)"></div>
-                <div class="form-group"><label class="form-label">邊框</label><select class="form-control" onchange="updTbl('${t.id}','cellBorder',this.value)"><option value="none">無</option><option value="1px solid #999">細線</option><option value="2px solid #333">粗線</option></select></div>
+                <div class="form-group"><label>表頭高</label><input type="number" class="form-control" value="${t.headerHeight}" oninput="updTbl('${t.id}','headerHeight',+this.value)"></div>
+                <div class="form-group"><label>列高</label><input type="number" class="form-control" value="${t.rowHeight}" oninput="updTbl('${t.id}','rowHeight',+this.value)"></div>
+                <div class="form-group"><label>字體</label><input type="number" class="form-control" value="${t.fontSize}" oninput="updTbl('${t.id}','fontSize',+this.value)"></div>
+                <div class="form-group"><label>背景</label><input type="color" class="form-control" value="${t.headerBg}" oninput="updTbl('${t.id}','headerBg',this.value)"></div>
+                <div class="form-group"><label>邊框</label><select class="form-control" onchange="updTbl('${t.id}','cellBorder',this.value)"><option value="none">無</option><option value="1px solid #999">細線</option><option value="2px solid #333">粗線</option></select></div>
                 <div class="panel-title">欄位微調</div>
                 ${t.columns.map((c,i)=>`
                     <div class="prop-col-item" style="padding:8px;margin-bottom:5px;border-radius:4px;" 
