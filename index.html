@@ -143,7 +143,7 @@
             border: 1px solid #ddd;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             position: relative;
-            padding: 0; /* 列印時避免內距影響 */
+            padding: 0;
             overflow: hidden;
         }
         .canvas-label {
@@ -164,10 +164,10 @@
             min-height: 20px;
             transition: all 0.2s;
             resize: both;
-            overflow: hidden; /* 改為 hidden 避免捲軸 */
+            overflow: hidden;
             user-select: none;
             display: flex;
-            align-items: center; /* 垂直置中 */
+            align-items: center;
         }
         .canvas-element:hover {
             box-shadow: 0 0 8px rgba(33, 150, 243, 0.3);
@@ -181,7 +181,7 @@
             color: inherit;
             font-weight: inherit;
             width: 100%;
-            pointer-events: none; /* 讓點擊穿透到父元素 */
+            pointer-events: none;
         }
         .resize-handle {
             position: absolute;
@@ -330,45 +330,25 @@
             color: #c62828;
             border-left: 3px solid #c62828;
         }
-        /* 設定面板 */
-        .settings-panel {
-            margin-bottom: 20px;
-            padding: 15px;
-            background: var(--bg);
-            border-radius: 6px;
-        }
-        .settings-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
         /* 響應式設計 */
         @media (max-width: 1400px) {
             .main-layout {
                 grid-template-columns: 1fr;
             }
-            
             .canvas-panel, .right-panel, .left-panel {
                 grid-column: 1;
             }
         }
 
-        /* ========== 修正後的列印樣式 ========== */
+        /* ========== 列印專用樣式 (修正後) ========== */
         @media print {
-            /* 1. 隱藏 body 下的所有內容，但這不是 display: none，而是 visibility: hidden */
-            /* 這樣可以保留文檔流結構，避免某些瀏覽器渲染問題 */
             body {
                 visibility: hidden;
                 background: white;
             }
-            
-            /* 2. 特別指定 canvas 和其子元素可見 */
             .canvas, .canvas * {
                 visibility: visible;
             }
-            
-            /* 3. 將 canvas 強制定位到頁面最左上角 */
             .canvas {
                 position: fixed;
                 top: 0;
@@ -382,17 +362,12 @@
                 background: white;
                 z-index: 9999;
             }
-            
-            /* 4. 關鍵：保留 absolute 定位，但移除編輯時的邊框和背景 */
             .canvas-element {
-                /* position: absolute;  這裡不需要重寫，繼承原本的 CSS 即可 */
-                background: transparent !important; /* 強制背景透明 */
-                border: none !important; /* 移除藍色邊框 */
+                background: transparent !important;
+                border: none !important;
                 box-shadow: none !important;
-                resize: none; /* 移除調整大小的手柄 */
+                resize: none;
             }
-
-            /* 隱藏 A4 標籤和調整大小的手柄 */
             .canvas-label, .resize-handle {
                 display: none !important;
             }
@@ -429,6 +404,14 @@
 
             <div class="panel canvas-panel">
                 <div class="panel-title">🎨 設計畫布</div>
+                
+                <div id="dataControls" style="display: none; margin-bottom: 10px; padding: 10px; background: #e3f2fd; border-radius: 4px; align-items: center; gap: 10px;">
+                    <span style="font-weight: bold; color: #1565c0; font-size: 13px;">📊 資料預覽：</span>
+                    <button class="btn btn-secondary" id="prevDataBtn" style="padding: 4px 8px; font-size: 12px;">◀ 上一筆</button>
+                    <span id="dataIndicator" style="font-size: 13px; min-width: 80px; text-align: center;">第 0 / 0 筆</span>
+                    <button class="btn btn-secondary" id="nextDataBtn" style="padding: 4px 8px; font-size: 12px;">下一筆 ▶</button>
+                </div>
+
                 <div style="margin-bottom: 15px; display: flex; gap: 8px;">
                     <button class="btn btn-secondary" id="addTextBtn">➕ 文字</button>
                     <button class="btn btn-secondary" id="addFieldBtn">🔗 欄位</button>
@@ -466,7 +449,8 @@
             elements: [],
             selectedElement: null,
             previewMode: false,
-            data: null
+            data: null,
+            currentDataIndex: 0
         };
 
         // ============ DOM 元素 ============
@@ -476,6 +460,12 @@
         const canvas = document.getElementById('canvas');
         const propertyPanel = document.getElementById('propertyPanel');
         const messageDiv = document.getElementById('message');
+        
+        // 資料控制元素
+        const dataControls = document.getElementById('dataControls');
+        const prevDataBtn = document.getElementById('prevDataBtn');
+        const nextDataBtn = document.getElementById('nextDataBtn');
+        const dataIndicator = document.getElementById('dataIndicator');
 
         // ============ 文件上傳 ============
         uploadArea.addEventListener('click', () => fileInput.click());
@@ -510,8 +500,16 @@
                         throw new Error('不支持的檔案格式');
                     }
                     state.data = data;
+                    state.currentDataIndex = 0;
                     extractFields(data);
-                    showMessage(`✅ 成功上傳！提取到 ${state.fields.length} 個欄位`, 'success');
+                    
+                    // 顯示資料控制列
+                    if (state.data && state.data.length > 0) {
+                        dataControls.style.display = 'flex';
+                        updateDataIndicator();
+                    }
+                    
+                    showMessage(`✅ 成功上傳！共 ${state.data.length} 筆數據`, 'success');
                 } catch (error) {
                     showMessage(`❌ 錯誤: ${error.message}`, 'error');
                 }
@@ -532,13 +530,11 @@
                 });
                 data.push(row);
             }
-            
             return data;
         }
 
         function extractFields(data) {
             state.fields = [];
-            
             if (Array.isArray(data) && data.length > 0) {
                 state.fields = Object.keys(data[0]);
             } else if (typeof data === 'object') {
@@ -557,21 +553,42 @@
                     </div>
                 `).join('');
 
-            // 拖拽事件
             document.querySelectorAll('.field-item').forEach(item => {
                 item.addEventListener('dragstart', (e) => {
                     e.dataTransfer.effectAllowed = 'copy';
                     e.dataTransfer.setData('text/plain', item.dataset.field);
                     item.classList.add('dragging');
                 });
-                
                 item.addEventListener('dragend', () => {
                     item.classList.remove('dragging');
                 });
             });
         }
 
-        // ============ 畫布操作 ============
+        // ============ 資料切換邏輯 ============
+        function updateDataIndicator() {
+            if (!state.data || state.data.length === 0) return;
+            dataIndicator.textContent = `第 ${state.currentDataIndex + 1} / ${state.data.length} 筆`;
+            if (state.previewMode) {
+                applyDataToCanvas();
+            }
+        }
+
+        prevDataBtn.addEventListener('click', () => {
+            if (state.data && state.currentDataIndex > 0) {
+                state.currentDataIndex--;
+                updateDataIndicator();
+            }
+        });
+
+        nextDataBtn.addEventListener('click', () => {
+            if (state.data && state.currentDataIndex < state.data.length - 1) {
+                state.currentDataIndex++;
+                updateDataIndicator();
+            }
+        });
+
+        // ============ 畫布操作與資料合併 ============
         let elementCounter = 0;
 
         function createCanvasElement(type, fieldName = null) {
@@ -612,12 +629,20 @@
             div.style.fontWeight = element.fontWeight;
             div.style.color = element.color;
             div.style.backgroundColor = element.backgroundColor;
-            // 只有在非列印模式下顯示邊框，但這裡我們先設在 style，CSS print 會 override
             div.style.border = element.border;
             
+            // 如果在預覽模式且是欄位，嘗試顯示真實數據
+            let displayText = element.content;
+            if (state.previewMode && element.type === 'field' && state.data && state.data.length > 0) {
+                const currentRow = state.data[state.currentDataIndex];
+                if (currentRow[element.fieldName] !== undefined) {
+                    displayText = currentRow[element.fieldName];
+                }
+            }
+
             const content = document.createElement('div');
             content.className = 'canvas-element-value';
-            content.textContent = element.content;
+            content.textContent = displayText;
             div.appendChild(content);
 
             div.addEventListener('click', (e) => {
@@ -625,10 +650,38 @@
                 selectElement(element, div);
             });
 
-            makeDraggable(div, element);
-            makeResizable(div, element);
+            if (!state.previewMode) {
+                makeDraggable(div, element);
+                makeResizable(div, element);
+            } else {
+                div.classList.add('preview');
+            }
 
             canvas.appendChild(div);
+        }
+
+        function applyDataToCanvas() {
+            if (!state.data || state.data.length === 0) return;
+            const currentRow = state.data[state.currentDataIndex];
+            
+            state.elements.forEach(el => {
+                const domEl = document.getElementById(el.id);
+                const textDiv = domEl.querySelector('.canvas-element-value');
+                
+                if (el.type === 'field' && el.fieldName) {
+                    textDiv.textContent = currentRow[el.fieldName] !== undefined ? currentRow[el.fieldName] : '';
+                } else {
+                    textDiv.textContent = el.content;
+                }
+            });
+        }
+
+        function revertCanvasToDesign() {
+            state.elements.forEach(el => {
+                const domEl = document.getElementById(el.id);
+                const textDiv = domEl.querySelector('.canvas-element-value');
+                textDiv.textContent = el.content;
+            });
         }
 
         function makeDraggable(element, dataElement) {
@@ -636,6 +689,7 @@
             let offsetX = 0, offsetY = 0;
 
             element.addEventListener('mousedown', (e) => {
+                if (state.previewMode) return;
                 if (e.target.classList.contains('resize-handle')) return;
                 isDragging = true;
                 offsetX = e.clientX - element.offsetLeft;
@@ -663,6 +717,7 @@
             let isResizing = false;
 
             handle.addEventListener('mousedown', (e) => {
+                if (state.previewMode) return;
                 e.stopPropagation();
                 isResizing = true;
                 const startX = e.clientX;
@@ -690,11 +745,10 @@
         }
 
         function selectElement(element, domElement) {
-            // 清除之前的選擇
+            if (state.previewMode) return;
             document.querySelectorAll('.canvas-element.selected').forEach(el => {
                 el.classList.remove('selected');
             });
-            
             state.selectedElement = element;
             domElement.classList.add('selected');
             renderPropertyPanel(element);
@@ -708,7 +762,6 @@
             propertyPanel.innerHTML = '<div style="text-align: center; color: #999; padding: 30px 0;">選擇畫布中的元素進行編輯</div>';
         });
 
-        // ============ 拖放到畫布 ============
         canvas.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'copy';
@@ -719,7 +772,6 @@
             const fieldName = e.dataTransfer.getData('text/plain');
             
             if (fieldName && state.fields.includes(fieldName)) {
-                // 計算相對畫布的座標
                 const rect = canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
@@ -753,12 +805,40 @@
 
         document.getElementById('previewBtn').addEventListener('click', () => {
             state.previewMode = !state.previewMode;
-            document.getElementById('canvas').classList.toggle('preview-mode');
-            document.getElementById('previewBtn').textContent = state.previewMode ? '✏️ 編輯' : '👁️ 預覽';
+            const canvas = document.getElementById('canvas');
+            const btn = document.getElementById('previewBtn');
+
+            canvas.classList.toggle('preview-mode');
+            
+            if (state.previewMode) {
+                btn.textContent = '✏️ 編輯';
+                // 清除選取狀態
+                document.querySelectorAll('.canvas-element.selected').forEach(el => el.classList.remove('selected'));
+                state.selectedElement = null;
+                propertyPanel.innerHTML = '<div style="text-align: center; color: #999; padding: 30px 0;">預覽模式不可編輯</div>';
+
+                if (state.data) {
+                    applyDataToCanvas();
+                    showMessage('👁️ 預覽模式：顯示真實資料', 'info');
+                } else {
+                    showMessage('⚠️ 無數據可預覽，請先上傳檔案', 'warning');
+                }
+            } else {
+                btn.textContent = '👁️ 預覽';
+                revertCanvasToDesign();
+                // 重新渲染以恢復拖曳功能
+                state.elements.forEach(renderElement);
+            }
         });
 
         document.getElementById('printBtn').addEventListener('click', () => {
-            window.print();
+            // 列印前強制切換到「預覽模式」
+            if (!state.previewMode) {
+                document.getElementById('previewBtn').click(); 
+            }
+            setTimeout(() => {
+                window.print();
+            }, 100);
         });
 
         document.getElementById('saveBtn').addEventListener('click', () => {
@@ -813,10 +893,8 @@
             }
         });
 
-        // ============ 屬性面板 ============
-        // ============ 屬性面板 (修正版) ============
+        // ============ 屬性面板 (含透明度修復) ============
         function renderPropertyPanel(element) {
-            // 處理背景顏色邏輯：如果是 transparent，給 input 顯示 #ffffff (避免報錯)，並標記為透明狀態
             const isTransparent = element.backgroundColor === 'transparent' || !element.backgroundColor;
             const safeBgColor = isTransparent ? '#ffffff' : element.backgroundColor;
 
@@ -859,14 +937,10 @@
                     <label class="property-label">背景顏色</label>
                     <div class="color-picker">
                         <input type="color" class="color-input" id="bgColorInput" value="${safeBgColor}" ${isTransparent ? 'disabled' : ''}>
-                        
                         <label style="display: flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer;">
                             <input type="checkbox" id="bgTransparentCheck" ${isTransparent ? 'checked' : ''}>
                             透明
                         </label>
-                    </div>
-                    <div style="font-size: 12px; color: #999; margin-top: 4px;">
-                        當前值: ${element.backgroundColor || 'transparent'}
                     </div>
                 </div>
                 <div class="property-group">
@@ -876,9 +950,6 @@
             
             propertyPanel.innerHTML = html;
 
-            // --- 事件綁定 ---
-
-            // 1. 欄位選擇
             if (element.type === 'field') {
                 document.getElementById('fieldSelect').addEventListener('change', (e) => {
                     element.fieldName = e.target.value;
@@ -887,56 +958,47 @@
                 });
             }
 
-            // 2. 內容輸入
             document.getElementById('contentInput').addEventListener('change', (e) => {
                 element.content = e.target.value;
                 updateElement();
             });
 
-            // 3. 字體大小
             document.getElementById('fontSizeInput').addEventListener('change', (e) => {
                 element.fontSize = parseInt(e.target.value);
                 updateElement();
             });
 
-            // 4. 字體粗細
             document.getElementById('fontWeightSelect').addEventListener('change', (e) => {
                 element.fontWeight = e.target.value;
                 updateElement();
             });
 
-            // 5. 文字顏色
             document.getElementById('colorInput').addEventListener('input', (e) => {
                 element.color = e.target.value;
-                // 更新後面的文字顯示
                 e.target.nextElementSibling.textContent = e.target.value;
                 updateElement();
             });
 
-            // 6. 背景顏色邏輯 (修正重點)
             const bgColorInput = document.getElementById('bgColorInput');
             const bgTransparentCheck = document.getElementById('bgTransparentCheck');
 
-            // 當選擇顏色時
             bgColorInput.addEventListener('input', (e) => {
                 element.backgroundColor = e.target.value;
-                bgTransparentCheck.checked = false; // 取消透明勾選
+                bgTransparentCheck.checked = false;
                 updateElement();
             });
 
-            // 當切換透明開關時
             bgTransparentCheck.addEventListener('change', (e) => {
                 if (e.target.checked) {
                     element.backgroundColor = 'transparent';
-                    bgColorInput.disabled = true; // 禁用顏色選擇
+                    bgColorInput.disabled = true;
                 } else {
-                    element.backgroundColor = bgColorInput.value; // 恢復為選色器當前的值
+                    element.backgroundColor = bgColorInput.value;
                     bgColorInput.disabled = false;
                 }
                 updateElement();
             });
 
-            // 7. 刪除按鈕
             document.getElementById('deleteBtn').addEventListener('click', () => {
                 state.elements = state.elements.filter(el => el.id !== element.id);
                 document.getElementById(element.id).remove();
@@ -945,14 +1007,12 @@
                 showMessage('✅ 已刪除', 'success');
             });
 
-            // 輔助函數：更新視圖與選取狀態
             function updateElement() {
                 renderElement(element);
-                selectElement(element, document.getElementById(element.id)); // 保持選取狀態以刷新屬性面板顯示
+                selectElement(element, document.getElementById(element.id));
             }
         }
 
-        // ============ 訊息提示 ============
         function showMessage(text, type = 'info') {
             messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
             setTimeout(() => {
