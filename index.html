@@ -814,7 +814,12 @@
         });
 
         // ============ 屬性面板 ============
+        // ============ 屬性面板 (修正版) ============
         function renderPropertyPanel(element) {
+            // 處理背景顏色邏輯：如果是 transparent，給 input 顯示 #ffffff (避免報錯)，並標記為透明狀態
+            const isTransparent = element.backgroundColor === 'transparent' || !element.backgroundColor;
+            const safeBgColor = isTransparent ? '#ffffff' : element.backgroundColor;
+
             const html = `
                 <div class="property-group">
                     <label class="property-label">元素類型</label>
@@ -833,7 +838,7 @@
                     <input type="text" class="property-input" id="contentInput" value="${element.content}">
                 </div>
                 <div class="property-group">
-                    <label class="property-label">字體大小</label>
+                    <label class="property-label">字體大小 (px)</label>
                     <input type="number" class="property-input" id="fontSizeInput" value="${element.fontSize}" min="8" max="72">
                 </div>
                 <div class="property-group">
@@ -853,8 +858,15 @@
                 <div class="property-group">
                     <label class="property-label">背景顏色</label>
                     <div class="color-picker">
-                        <input type="color" class="color-input" id="bgColorInput" value="${element.backgroundColor || '#ffffff'}">
-                        <span style="font-size: 12px; color: #999;">${element.backgroundColor || 'transparent'}</span>
+                        <input type="color" class="color-input" id="bgColorInput" value="${safeBgColor}" ${isTransparent ? 'disabled' : ''}>
+                        
+                        <label style="display: flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer;">
+                            <input type="checkbox" id="bgTransparentCheck" ${isTransparent ? 'checked' : ''}>
+                            透明
+                        </label>
+                    </div>
+                    <div style="font-size: 12px; color: #999; margin-top: 4px;">
+                        當前值: ${element.backgroundColor || 'transparent'}
                     </div>
                 </div>
                 <div class="property-group">
@@ -864,46 +876,67 @@
             
             propertyPanel.innerHTML = html;
 
-            // 綁定屬性改變事件
+            // --- 事件綁定 ---
+
+            // 1. 欄位選擇
             if (element.type === 'field') {
                 document.getElementById('fieldSelect').addEventListener('change', (e) => {
                     element.fieldName = e.target.value;
                     element.content = `[${e.target.value}]`;
-                    renderElement(element);
-                    selectElement(element, document.getElementById(element.id));
+                    updateElement();
                 });
             }
 
+            // 2. 內容輸入
             document.getElementById('contentInput').addEventListener('change', (e) => {
                 element.content = e.target.value;
-                renderElement(element);
-                selectElement(element, document.getElementById(element.id));
+                updateElement();
             });
 
+            // 3. 字體大小
             document.getElementById('fontSizeInput').addEventListener('change', (e) => {
                 element.fontSize = parseInt(e.target.value);
-                renderElement(element);
-                selectElement(element, document.getElementById(element.id));
+                updateElement();
             });
 
+            // 4. 字體粗細
             document.getElementById('fontWeightSelect').addEventListener('change', (e) => {
                 element.fontWeight = e.target.value;
-                renderElement(element);
-                selectElement(element, document.getElementById(element.id));
+                updateElement();
             });
 
-            document.getElementById('colorInput').addEventListener('change', (e) => {
+            // 5. 文字顏色
+            document.getElementById('colorInput').addEventListener('input', (e) => {
                 element.color = e.target.value;
-                renderElement(element);
-                selectElement(element, document.getElementById(element.id));
+                // 更新後面的文字顯示
+                e.target.nextElementSibling.textContent = e.target.value;
+                updateElement();
             });
 
-            document.getElementById('bgColorInput').addEventListener('change', (e) => {
-                element.backgroundColor = e.target.value || 'transparent';
-                renderElement(element);
-                selectElement(element, document.getElementById(element.id));
+            // 6. 背景顏色邏輯 (修正重點)
+            const bgColorInput = document.getElementById('bgColorInput');
+            const bgTransparentCheck = document.getElementById('bgTransparentCheck');
+
+            // 當選擇顏色時
+            bgColorInput.addEventListener('input', (e) => {
+                element.backgroundColor = e.target.value;
+                bgTransparentCheck.checked = false; // 取消透明勾選
+                updateElement();
             });
 
+            // 當切換透明開關時
+            bgTransparentCheck.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    element.backgroundColor = 'transparent';
+                    bgColorInput.disabled = true; // 禁用顏色選擇
+                } else {
+                    element.backgroundColor = bgColorInput.value; // 恢復為選色器當前的值
+                    bgColorInput.disabled = false;
+                }
+                updateElement();
+            });
+
+            // 7. 刪除按鈕
             document.getElementById('deleteBtn').addEventListener('click', () => {
                 state.elements = state.elements.filter(el => el.id !== element.id);
                 document.getElementById(element.id).remove();
@@ -911,6 +944,12 @@
                 propertyPanel.innerHTML = '<div style="text-align: center; color: #999; padding: 30px 0;">選擇畫布中的元素進行編輯</div>';
                 showMessage('✅ 已刪除', 'success');
             });
+
+            // 輔助函數：更新視圖與選取狀態
+            function updateElement() {
+                renderElement(element);
+                selectElement(element, document.getElementById(element.id)); // 保持選取狀態以刷新屬性面板顯示
+            }
         }
 
         // ============ 訊息提示 ============
