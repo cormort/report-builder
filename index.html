@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Report Studio v5.0 - 表格精靈版</title>
-    <!-- PDF.js -->
+    <title>Pro Report Studio v5.2 - 智能表格旗艦版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <style>
@@ -12,48 +11,51 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); height: 100vh; display: flex; flex-direction: column; color: #333; }
         
-        /* Layout */
+        /* Layout & UI */
         .header { background: #2b3a42; color: white; padding: 0 20px; height: 60px; display: flex; justify-content: space-between; align-items: center; }
         .main-layout { display: flex; flex: 1; overflow: hidden; }
         .panel { background: var(--surface); display: flex; flex-direction: column; border-right: 1px solid var(--border); }
         .left-panel { width: 260px; padding: 15px; overflow-y: auto; }
         .center-panel { flex: 1; background: #525659; position: relative; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow: auto; }
-        .right-panel { width: 300px; padding: 15px; overflow-y: auto; border-left: 1px solid var(--border); }
+        .right-panel { width: 320px; padding: 15px; overflow-y: auto; border-left: 1px solid var(--border); }
         .panel-title { font-size: 14px; font-weight: bold; color: #666; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
-
-        /* UI Elements */
+        
         .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; background: #e0e0e0; display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: 0.2s; }
         .btn:hover { background: #d0d0d0; }
-        .btn-primary { background: var(--primary); color: white; } .btn-primary:hover { background: #1a6a9e; }
+        .btn-primary { background: var(--primary); color: white; }
         .btn-danger { background: #f56c6c; color: white; }
         .btn-success { background: #67c23a; color: white; }
         .btn-block { width: 100%; margin-bottom: 5px; }
+        
         .form-group { margin-bottom: 10px; }
         .form-label { font-size: 12px; color: #666; display: block; margin-bottom: 3px; }
         .form-control { width: 100%; padding: 5px; border: 1px solid var(--border); font-size: 13px; }
         
-        /* Upload & List */
         .upload-area { border: 2px dashed var(--border); padding: 15px; text-align: center; cursor: pointer; font-size: 13px; margin-bottom: 10px; color: #666; }
-        .upload-area:hover { border-color: var(--primary); background: #ecf5ff; }
         .field-item { padding: 5px 8px; background: #f4f4f5; border: 1px solid #e9e9eb; margin-bottom: 4px; cursor: grab; font-size: 12px; }
         
         /* Canvas */
         .canvas-wrapper { box-shadow: 0 0 20px rgba(0,0,0,0.5); margin: auto; transition: 0.3s; }
-        .canvas {
-            background: white; position: relative; overflow: hidden; transform-origin: top center;
-            background-image: linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px);
-            background-size: 20px 20px;
-        }
+        .canvas { background: white; position: relative; overflow: hidden; transform-origin: top center; background-image: linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px); background-size: 20px 20px; }
         .canvas-element { position: absolute; cursor: move; display: flex; align-items: center; overflow: hidden; border: 1px dashed #ccc; box-sizing: border-box; }
         .canvas-element.selected { border: 2px solid var(--primary); z-index: 100; background: rgba(33, 150, 243, 0.1); }
         .canvas-element-value { pointer-events: none; width: 100%; padding: 2px; overflow: hidden; }
         .resize-handle { position: absolute; bottom: 0; right: 0; width: 8px; height: 8px; background: var(--primary); cursor: nwse-resize; display: none; }
         .canvas-element.selected .resize-handle { display: block; }
         #splitLine { position: absolute; left: 0; width: 100%; height: 0; border-top: 2px dashed #f56c6c; z-index: 90; cursor: ns-resize; display: none; }
+        
+        /* Table Special Styles */
+        .table-element { display: block !important; overflow: visible !important; border: none !important; background: transparent !important; }
+        .col-resizer:hover { opacity: 1 !important; background: var(--primary) !important; }
+        
+        /* Context Menu */
+        .context-menu { position: fixed; background: white; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 12px rgba(0,0,0,0.2); z-index: 9999; min-width: 150px; overflow: hidden; }
+        .context-menu div { padding: 8px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f0f0f0; color: #333; }
+        .context-menu div:hover { background: #f5f5f5; color: var(--primary); }
 
-        /* Table Wizard Modal */
+        /* Modals */
         .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; }
-        .modal { background: white; padding: 20px; border-radius: 8px; width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .modal { background: white; padding: 20px; border-radius: 8px; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
 
         /* Print */
         #print-container { display: none; }
@@ -63,19 +65,18 @@
             #print-container { display: block !important; position: absolute; left: 0; top: 0; width: 100%; visibility: visible; }
             #print-container * { visibility: visible; }
             .print-page { position: relative; margin: 0 auto; background: white; page-break-after: always; break-after: page; overflow: hidden; }
-            .print-element { position: absolute; display: flex; align-items: center; padding: 2px; }
+            .print-element { position: absolute; display: flex; align-items: center; padding: 2px; box-sizing: border-box; }
             .print-page { background-image: none !important; }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <div style="font-weight: bold;">📊 Pro Report Studio v5.0 (Table Wizard)</div>
+        <div style="font-weight: bold;">📊 Pro Report Studio v5.2</div>
         <div><button class="btn btn-success" id="printBtn">🖨️ 列印 / 匯出</button></div>
     </div>
 
     <div class="main-layout">
-        <!-- LEFT: Tools -->
         <div class="panel left-panel">
             <div class="panel-title">1. 檔案</div>
             <div class="upload-area" id="dataBtn">📂 上傳 CSV 數據<input type="file" id="dataFile" hidden accept=".csv,.json"></div>
@@ -83,24 +84,24 @@
             <div class="upload-area" id="pdfBtn" style="color:#2186c4; border-color:#2186c4">📄 匯入 PDF 底圖<input type="file" id="pdfFile" hidden accept=".pdf"></div>
             
             <div class="panel-title">2. 插入物件</div>
-            <button class="btn btn-block" onclick="openTableModal()">📅 插入表格 (精靈)</button>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-bottom:10px;">
+            <button class="btn btn-block" onclick="openTableModal('smart')">📊 智能表格 (整塊)</button>
+            <button class="btn btn-block" onclick="openTableModal('virtual')">📋 虛擬表格 (單格)</button>
+            <div style="margin-top:5px; display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
                 <button class="btn" onclick="addElement('text','文字',20,20)">A 文字</button>
                 <button class="btn" onclick="addElement('title','標題',20,20,150,40,20,'bold')">H 標題</button>
             </div>
             
-            <div class="panel-title">3. 基本形狀</div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px; margin-bottom:10px;">
-                <button class="btn" onclick="addElement('text','',50,50,100,50,12,'normal','transparent','2px solid #333')" title="矩形框">⬜</button>
-                <button class="btn" onclick="addElement('text','',50,50,200,2,12,'normal','#000','none')" title="水平線">━</button>
-                <button class="btn" onclick="addElement('text','',50,50,2,100,12,'normal','#000','none')" title="垂直線">┃</button>
+            <div class="panel-title" style="margin-top:10px">3. 形狀工具</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px;">
+                <button class="btn" onclick="addElement('text','',50,50,100,50,12,'normal','transparent','2px solid #333')" title="矩形">⬜</button>
+                <button class="btn" onclick="addElement('text','',50,50,200,2,12,'normal','#000','none')" title="橫線">━</button>
+                <button class="btn" onclick="addElement('text','',50,50,2,100,12,'normal','#000','none')" title="直線">┃</button>
             </div>
 
-            <div class="panel-title">4. 可用欄位</div>
+            <div class="panel-title" style="margin-top:10px">4. 欄位</div>
             <div id="fieldList" style="min-height:100px;"></div>
         </div>
 
-        <!-- CENTER: Canvas -->
         <div class="panel center-panel">
             <div style="margin-bottom:10px;">
                 <button class="btn btn-danger" id="clearBgBtn" style="display:none">🗑️ 清除背景圖</button>
@@ -111,37 +112,28 @@
                 </div>
             </div>
             
-            <!-- Table Wizard Modal -->
+            <!-- Table Modal -->
             <div class="modal-overlay" id="tableModal">
                 <div class="modal">
-                    <h3 style="margin-bottom:15px">插入表格精靈</h3>
-                    <div class="form-group">
-                        <label class="form-label">欄位數 (Columns)</label>
-                        <input type="number" id="tblCols" class="form-control" value="3" min="1" max="10">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">資料列數 (Rows)</label>
-                        <input type="number" id="tblRows" class="form-control" value="2" min="1" max="20">
-                    </div>
-                    <div class="form-group" style="font-size:12px; color:#666">
-                        <input type="checkbox" id="autoFill" checked> 自動填入 CSV 欄位名稱與變數
-                    </div>
+                    <h3 id="modalTitle" style="margin-bottom:15px">插入表格</h3>
+                    <div class="form-group"><label class="form-label">欄位數 (Cols)</label><input type="number" id="tblCols" class="form-control" value="3" min="1" max="10"></div>
+                    <div class="form-group"><label class="form-label">資料列數 (Rows)</label><input type="number" id="tblRows" class="form-control" value="2" min="1" max="20"></div>
+                    <div class="form-group" style="font-size:12px; color:#666"><input type="checkbox" id="autoFill" checked> 自動填入欄位變數</div>
                     <div style="display:flex; gap:10px; margin-top:20px;">
                         <button class="btn btn-block" onclick="closeTableModal()">取消</button>
-                        <button class="btn btn-primary btn-block" onclick="insertTable()">插入表格</button>
+                        <button class="btn btn-primary btn-block" onclick="insertTable()">插入</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- RIGHT: Settings -->
         <div class="panel right-panel">
-            <div class="panel-title">版面設定</div>
-            <div class="form-group"><label class="form-label">紙張</label><select id="pageSize" class="form-control"><option value="a4">A4</option><option value="a5">A5</option><option value="receipt80">80mm 收據</option><option value="custom">自訂/PDF</option></select></div>
-            <div class="form-group"><label class="form-label">方向</label><select id="orient" class="form-control"><option value="portrait">直向</option><option value="landscape">橫向</option></select></div>
+            <div class="panel-title">版面</div>
+            <div class="form-group"><select id="pageSize" class="form-control"><option value="a4">A4</option><option value="a5">A5</option><option value="receipt80">80mm</option><option value="custom">自訂</option></select></div>
+            <div class="form-group"><select id="orient" class="form-control"><option value="portrait">直向</option><option value="landscape">橫向</option></select></div>
             
-            <div class="panel-title" style="margin-top:15px">列印模式</div>
-            <div class="form-group"><select id="mode" class="form-control"><option value="single">單頁單筆</option><option value="group">分組列表</option><option value="grid">一頁多張 (標籤)</option></select></div>
+            <div class="panel-title" style="margin-top:15px">模式</div>
+            <div class="form-group"><select id="mode" class="form-control"><option value="single">單頁單筆</option><option value="group">分組列表</option><option value="grid">一頁多張</option></select></div>
             
             <div id="grpSet" style="display:none; background:#f0f9eb; padding:10px; border-radius:4px;">
                 <div class="form-group"><label class="form-label">分組欄位</label><select id="grpField" class="form-control"></select></div>
@@ -164,11 +156,10 @@
     <div id="print-container"></div>
 
     <script>
-        // --- State ---
         const state = { fields: [], elements: [], data: [], selected: null, config: { size: 'a4', orient: 'portrait', w: 210, h: 297, mode: 'single', grpF: '', splitY: 150, rowH: 30, gC: 2, gR: 4, gX: 10, gY: 10 } };
         const el = (id) => document.getElementById(id);
-        
-        // --- Init ---
+        let currentTableMode = 'smart';
+
         initCanvas(); initDrag();
 
         // --- Canvas & Layout ---
@@ -184,144 +175,207 @@
         }
 
         // --- Table Wizard ---
-        function openTableModal() { el('tableModal').style.display = 'flex'; }
+        function openTableModal(mode) {
+            currentTableMode = mode || 'smart';
+            el('tableModal').style.display = 'flex';
+            el('modalTitle').innerText = mode === 'smart' ? '智能表格 (單一物件)' : '虛擬格線 (單格自由排)';
+        }
         function closeTableModal() { el('tableModal').style.display = 'none'; }
-        function insertTable() {
+        function insertTable() { if (currentTableMode === 'smart') insertTableSmart(); else insertTableVirtual(); }
+
+        // === Smart Table Logic (Advanced) ===
+        function insertTableSmart() {
             const rows = parseInt(el('tblRows').value) || 2;
             const cols = parseInt(el('tblCols').value) || 3;
             const auto = el('autoFill').checked;
-            const startX = 20, startY = 50;
-            const cellW = 35, cellH = 10; // mm to px approx logic handled in addElement (1mm~3.78px) but here we use pixel values directly
-            // Using standard pixel sizes for screen: W=120, H=30
-            const w = 120, h = 30;
-
-            // Switch to Group mode if inserting many rows
-            if(rows > 1) {
-                state.config.mode = 'group';
-                el('mode').value = 'group';
-                updMode();
-                state.config.splitY = startY + h; // Set split line below header
-                state.config.rowH = h;
-                updSplit();
-                el('splitY').value = Math.round(state.config.splitY);
+            const columns = [], fields = [], columnWidths = [];
+            for (let c = 0; c < cols; c++) {
+                const fname = auto && state.fields[c] ? state.fields[c] : '';
+                columns.push(fname || `欄位 ${c+1}`); fields.push(fname); columnWidths.push(100);
             }
-
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    let type = 'text';
-                    let content = '';
-                    let bg = 'transparent';
-                    let fw = 'normal';
-
-                    // Logic: Row 0 is Header
-                    if (r === 0) {
-                        bg = '#f0f0f0'; fw = 'bold';
-                        content = auto && state.fields[c] ? state.fields[c] : `標題 ${c+1}`;
-                    } else {
-                        // Logic: Row > 0 is Body
-                        type = auto && state.fields[c] ? 'field' : 'text';
-                        content = auto && state.fields[c] ? state.fields[c] : `內容`;
-                    }
-
-                    // Only generate 1 body row if in group mode (it will repeat)
-                    // But if user asked for static table (rows), generate all.
-                    // For flexible "Report" style, usually we generate 1 header row + 1 body row template.
-                    
-                    addElement(type, content, startX + c * w, startY + r * h, w, h, 14, fw, bg, '1px solid #333');
-                }
-            }
+            const tblConfig = {
+                id: 'el-' + Math.random().toString(36).substr(2, 9), type: 'table',
+                x: 20, y: 50, columns, fields, columnWidths,
+                rowHeight: 30, headerHeight: 35, headerBg: '#f0f0f0', headerBorder: '2px solid #333', cellBorder: '1px solid #999',
+                fontSize: 14, headerFontWeight: 'bold', mergedCells: [], columnAligns: Array(cols).fill('left')
+            };
+            state.elements.push(tblConfig); renderTableElementAdvanced(tblConfig);
+            if(rows > 1) { state.config.mode = 'group'; el('mode').value = 'group'; updMode(); }
             closeTableModal();
         }
 
-        // --- PDF Import (Background Only) ---
-        el('pdfBtn').onclick = () => el('pdfFile').click();
-        el('pdfFile').onchange = async (e) => {
-            const f = e.target.files[0]; if (!f) return;
-            if(!confirm('匯入 PDF 為底圖？(將清除現有畫布)')) return;
+        function renderTableElementAdvanced(table) {
+            const d = document.createElement('div'); d.id = table.id; d.className = 'canvas-element table-element';
+            const totalW = table.columnWidths.reduce((a, b) => a + b, 0);
+            const totalH = table.headerHeight + table.rowHeight * 2;
+            d.style.cssText = `left:${table.x}px; top:${table.y}px; width:${totalW}px; height:${totalH}px; border:2px solid #2186c4; background:white; cursor:move; position:absolute;`;
             
-            try {
-                const pdf = await pdfjsLib.getDocument(await f.arrayBuffer()).promise;
-                const page = await pdf.getPage(1);
-                const vp = page.getViewport({ scale: 1.5 });
-                const cvs = document.createElement('canvas'); cvs.width = vp.width; cvs.height = vp.height;
-                await page.render({ canvasContext: cvs.getContext('2d'), viewport: vp }).promise;
-                
-                const rawVp = page.getViewport({ scale: 1.0 });
-                const wMm = rawVp.width * 0.352778, hMm = rawVp.height * 0.352778;
-                
-                state.config.size = 'custom'; state.config.w = wMm; state.config.h = hMm;
-                el('pageSize').value = 'custom';
-                el('canvas').style.backgroundImage = `url(${cvs.toDataURL()})`;
-                el('canvas').style.backgroundSize = '100% 100%';
-                el('clearBgBtn').style.display = 'inline-block';
-                
-                state.elements = []; el('canvas').innerHTML = '<div id="splitLine"></div>';
-                updSz();
-            } catch(err) { alert('PDF 錯誤'); }
-        };
-        el('clearBgBtn').onclick = () => { el('canvas').style.backgroundImage = 'none'; el('clearBgBtn').style.display = 'none'; };
-
-        // --- Elements ---
-        function addElement(type, c, x, y, w = 120, h = 30, fs = 14, fw = 'normal', bg = 'transparent', br = '1px dashed #ccc') {
-            const id = 'el-' + Math.random().toString(36).substr(2, 9);
-            const item = { id, type, content: c, x, y, width: w, height: h, fontSize: fs, fontWeight: fw, backgroundColor: bg, border: br, fieldName: type === 'field' ? c : null };
-            state.elements.push(item); renderEl(item); return item;
-        }
-
-        function renderEl(item) {
-            const d = document.createElement('div'); d.id = item.id; d.className = 'canvas-element'; updEl(d, item);
-            d.innerHTML = `<div class="canvas-element-value">${item.type === 'field' ? `[${item.content}]` : item.content}</div><div class="resize-handle"></div>`;
-            d.onmousedown = (e) => { if (e.target.className.includes('resize')) return; e.stopPropagation(); selEl(item); drag(e, item, d, 'move'); };
-            d.querySelector('.resize-handle').onmousedown = (e) => { e.stopPropagation(); drag(e, item, d, 'resize'); };
+            let html = '<div style="width:100%;height:100%;">';
+            // Header
+            html += `<div style="display:flex; height:${table.headerHeight}px;">`;
+            table.columns.forEach((col, i) => {
+                html += `<div style="position:relative; width:${table.columnWidths[i]}px; background:${table.headerBg}; border:${table.headerBorder}; padding:5px; font-weight:${table.headerFontWeight}; font-size:${table.fontSize}px; text-align:${table.columnAligns[i]}; overflow:hidden; box-sizing:border-box;">${col}<div class="col-resizer" data-col="${i}" style="position:absolute; right:0; top:0; width:5px; height:100%; cursor:col-resize;"></div></div>`;
+            });
+            html += '</div>';
+            // Data
+            html += `<div style="display:flex; height:${table.rowHeight}px;">`;
+            table.fields.forEach((f, i) => { html += `<div style="width:${table.columnWidths[i]}px; border:${table.cellBorder}; padding:5px; font-size:${table.fontSize}px; text-align:${table.columnAligns[i]}; color:#666; overflow:hidden; box-sizing:border-box;">[${f||'資料'}]</div>`; });
+            html += '</div></div>';
+            
+            d.innerHTML = html;
+            d.onmouseenter = () => d.querySelectorAll('.col-resizer').forEach(r => r.style.opacity = '1');
+            d.onmouseleave = () => d.querySelectorAll('.col-resizer').forEach(r => r.style.opacity = '0');
+            
+            d.querySelectorAll('.col-resizer').forEach(r => {
+                r.onmousedown = (e) => {
+                    e.stopPropagation(); const ci = +r.dataset.col, sx = e.clientX, sw = table.columnWidths[ci];
+                    const mv = (ev) => { table.columnWidths[ci] = Math.max(20, sw + (ev.clientX - sx)); d.remove(); renderTableElementAdvanced(table); };
+                    const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); renderTableProps(table); };
+                    document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
+                };
+            });
+            d.onmousedown = (e) => { if(e.target.classList.contains('col-resizer'))return; e.stopPropagation(); selEl(table); dragTable(e, table, d); };
+            d.oncontextmenu = (e) => { e.preventDefault(); showTableCtxMenu(e, table); };
             el('canvas').appendChild(d);
         }
 
-        function drag(e, item, d, mode) {
-            const sx = e.clientX, sy = e.clientY;
-            const startVal = mode === 'move' ? { x: item.x, y: item.y } : { w: item.width, h: item.height };
-            const mv = (ev) => {
-                if (mode === 'move') { item.x = startVal.x + (ev.clientX - sx); item.y = startVal.y + (ev.clientY - sy); }
-                else { item.width = Math.max(5, startVal.w + (ev.clientX - sx)); item.height = Math.max(5, startVal.h + (ev.clientY - sy)); renderProps(item); }
-                updEl(d, item);
-            };
+        function dragTable(e, table, d) {
+            const sx = e.clientX, sy = e.clientY, stX = table.x, stY = table.y;
+            const mv = (ev) => { table.x = stX + (ev.clientX - sx); table.y = stY + (ev.clientY - sy); d.style.left = table.x + 'px'; d.style.top = table.y + 'px'; };
             const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); };
             document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
         }
 
-        function updEl(d, item) {
-            Object.assign(d.style, { left: item.x + 'px', top: item.y + 'px', width: item.width + 'px', height: item.height + 'px', fontSize: item.fontSize + 'px', fontWeight: item.fontWeight, background: item.backgroundColor, border: item.border });
-        }
-        function selEl(item) { state.selected = item; document.querySelectorAll('.selected').forEach(x => x.classList.remove('selected')); el(item.id).classList.add('selected'); renderProps(item); }
-
-        function renderProps(item) {
+        // === Table Props ===
+        function renderTableProps(t) {
+            const totalW = t.columnWidths.reduce((a, b) => a + b, 0);
             el('props').innerHTML = `
-                <div class="form-group"><label>內容</label><input class="form-control" value="${item.content}" oninput="setProp('${item.id}','content',this.value)"></div>
-                <div class="form-group"><label>字體大小</label><input type="number" class="form-control" value="${item.fontSize}" oninput="setProp('${item.id}','fontSize',this.value)"></div>
-                <div class="form-group"><label>背景色</label><input type="color" style="width:100%" value="${item.backgroundColor === 'transparent' ? '#ffffff' : item.backgroundColor}" oninput="setProp('${item.id}','backgroundColor',this.value)"></div>
-                <div class="form-group"><label>邊框</label><select class="form-control" onchange="setProp('${item.id}','border',this.value)"><option value="none">無</option><option value="1px solid #000">實線</option><option value="2px solid #000">粗實線</option><option value="1px dashed #000">虛線</option></select></div>
-                <button class="btn btn-danger btn-block" onclick="delEl('${item.id}')">刪除</button>
-            `;
+                <div style="max-height:500px; overflow-y:auto; padding:5px;">
+                    <div class="panel-title">表格設定 (寬:${totalW}px)</div>
+                    <div class="form-group"><label>表頭高</label><input type="number" class="form-control" value="${t.headerHeight}" oninput="updTbl('${t.id}','headerHeight',+this.value)"></div>
+                    <div class="form-group"><label>列高</label><input type="number" class="form-control" value="${t.rowHeight}" oninput="updTbl('${t.id}','rowHeight',+this.value)"></div>
+                    <div class="form-group"><label>字體</label><input type="number" class="form-control" value="${t.fontSize}" oninput="updTbl('${t.id}','fontSize',+this.value)"></div>
+                    <div class="form-group"><label>背景</label><input type="color" class="form-control" value="${t.headerBg}" oninput="updTbl('${t.id}','headerBg',this.value)"></div>
+                    <div class="form-group"><label>邊框</label><select class="form-control" onchange="updTbl('${t.id}','cellBorder',this.value)"><option value="none">無</option><option value="1px solid #999">細線</option><option value="2px solid #333">粗線</option></select></div>
+                    <div class="panel-title">欄位微調</div>
+                    ${t.columns.map((c,i)=>`<div style="background:#f5f5f5;padding:5px;margin-bottom:5px;"><div style="font-weight:bold;">${i+1}.${c}</div><div style="display:flex;gap:2px"><input type="number" value="${t.columnWidths[i]}" style="width:50px" oninput="updColW('${t.id}',${i},+this.value)"><select onchange="updColA('${t.id}',${i},this.value)"><option value="left">左</option><option value="center">中</option><option value="right">右</option></select></div></div>`).join('')}
+                    <button class="btn btn-danger btn-block" onclick="delEl('${t.id}')">刪除表格</button>
+                </div>`;
         }
-        window.setProp = (id, k, v) => { const item = state.elements.find(x => x.id === id); if (item) { item[k] = v; updEl(el(id), item); if (k === 'content') el(id).querySelector('.canvas-element-value').innerText = item.type === 'field' ? `[${v}]` : v; } };
+        window.updTbl = (id, k, v) => { const t = state.elements.find(e => e.id === id); if(t) { t[k] = v; el(id).remove(); renderTableElementAdvanced(t); } };
+        window.updColW = (id, i, v) => { const t = state.elements.find(e => e.id === id); if(t) { t.columnWidths[i] = Math.max(10, v); el(id).remove(); renderTableElementAdvanced(t); } };
+        window.updColA = (id, i, v) => { const t = state.elements.find(e => e.id === id); if(t) { t.columnAligns[i] = v; el(id).remove(); renderTableElementAdvanced(t); } };
+
+        // === Context Menu (Merge/Add/Remove) ===
+        function showTableCtxMenu(e, t) {
+            document.querySelectorAll('.context-menu').forEach(m => m.remove());
+            const m = document.createElement('div'); m.className = 'context-menu';
+            m.style.left = e.clientX + 'px'; m.style.top = e.clientY + 'px';
+            [
+                { l: '➕ 加欄位', a: () => addCol(t) }, { l: '➖ 刪欄位', a: () => remCol(t) }, { l: '🔀 合併儲存格', a: () => openMerge(t) }
+            ].forEach(i => {
+                const b = document.createElement('div'); b.innerText = i.l; b.onclick = () => { i.a(); m.remove(); }; m.appendChild(b);
+            });
+            document.body.appendChild(m);
+            setTimeout(() => document.addEventListener('click', () => m.remove(), { once: true }), 100);
+        }
+        function addCol(t) { t.columns.push('新欄'); t.fields.push(''); t.columnWidths.push(100); t.columnAligns.push('left'); el(t.id).remove(); renderTableElementAdvanced(t); renderTableProps(t); }
+        function remCol(t) { if(t.columns.length>1){ t.columns.pop(); t.fields.pop(); t.columnWidths.pop(); t.columnAligns.pop(); el(t.id).remove(); renderTableElementAdvanced(t); renderTableProps(t); } }
+        function openMerge(t) {
+            const res = prompt(`輸入合併參數 (列,起始欄,欄數)\n列: 0=表頭, 1=內容\n例如: 0,0,2 (合併表頭前兩欄)`);
+            if(res) {
+                const [r, c, s] = res.split(',').map(Number);
+                if(!isNaN(r) && !isNaN(c) && !isNaN(s)) {
+                    if(!t.mergedCells) t.mergedCells = [];
+                    t.mergedCells.push({ row: r, col: c, colspan: s });
+                    el(t.id).remove(); renderTableElementAdvanced(t);
+                }
+            }
+        }
+
+        // === Virtual Table Logic (Old) ===
+        function insertTableVirtual() {
+            const rows = parseInt(el('tblRows').value) || 2;
+            const cols = parseInt(el('tblCols').value) || 3;
+            const auto = el('autoFill').checked;
+            const sx = 20, sy = 50, cw = 120, ch = 30;
+            for (let c = 0; c < cols; c++) {
+                const h = addElement('text', auto && state.fields[c] ? state.fields[c] : `標題 ${c+1}`, sx + c * cw, sy, cw, ch, 14, 'bold', '#f0f0f0', 'none'); h.isTableHeader = true;
+                if (rows > 1) { const f = addElement(auto && state.fields[c] ? 'field' : 'text', auto && state.fields[c] ? state.fields[c] : '內容', sx + c * cw, sy + ch, cw, ch, 14, 'normal', 'transparent', 'none'); f.isTableData = true; f.tableColumn = c; }
+            }
+            if(rows > 1) { state.config.mode = 'group'; el('mode').value = 'group'; state.config.splitY = sy + ch; state.config.rowH = ch; updMode(); updSplit(); el('splitY').value = Math.round(state.config.splitY); }
+            closeTableModal();
+        }
+        function genGL(el, w, h) {
+            const s = el.isTableHeader ? '2px solid #333' : '1px solid #999';
+            return [ {x1:el.x,y1:el.y,x2:el.x+w,y2:el.y,s}, {x1:el.x,y1:el.y+h,x2:el.x+w,y2:el.y+h,s:'1px solid #999'}, {x1:el.x,y1:el.y,x2:el.x,y2:el.y+h,s:'1px solid #999'}, {x1:el.x+w,y1:el.y,x2:el.x+w,y2:el.y+h,s:'1px solid #999'} ];
+        }
+        function renGL(l) {
+            const d = document.createElement('div'); d.className = 'print-element';
+            if (l.y1 === l.y2) d.style.cssText = `position:absolute; left:${l.x1}px; top:${l.y1}px; width:${l.x2-l.x1}px; height:0; border-top:${l.s};`;
+            else d.style.cssText = `position:absolute; left:${l.x1}px; top:${l.y1}px; width:0; height:${l.y2-l.y1}px; border-left:${l.s};`;
+            return d;
+        }
+
+        // --- Common Elements ---
+        function addElement(type, c, x, y, w=120, h=30, fs=14, fw='normal', bg='transparent', br='1px dashed #ccc') {
+            const item = { id: 'el-'+Math.random().toString(36).substr(2,9), type, content:c, x, y, width:w, height:h, fontSize:fs, fontWeight:fw, backgroundColor:bg, border:br, fieldName:type==='field'?c:null };
+            state.elements.push(item); renderEl(item); return item;
+        }
+        function renderEl(item) {
+            if (item.type === 'table') { renderTableElementAdvanced(item); return; }
+            const d = document.createElement('div'); d.id = item.id; d.className = 'canvas-element'; updEl(d, item);
+            d.innerHTML = `<div class="canvas-element-value">${item.type==='field'?`[${item.content}]`:item.content}</div><div class="resize-handle"></div>`;
+            d.onmousedown = (e) => { if(e.target.className.includes('resize')) return; e.stopPropagation(); selEl(item); drag(e, item, d, 'move'); };
+            d.querySelector('.resize-handle').onmousedown = (e) => { e.stopPropagation(); drag(e, item, d, 'resize'); };
+            el('canvas').appendChild(d);
+        }
+        function drag(e, item, d, mode) {
+            const sx=e.clientX, sy=e.clientY, sv=mode==='move'?{x:item.x,y:item.y}:{w:item.width,h:item.height};
+            const mv=(ev)=>{ if(mode==='move'){item.x=sv.x+(ev.clientX-sx);item.y=sv.y+(ev.clientY-sy);} else{item.width=Math.max(5,sv.w+(ev.clientX-sx));item.height=Math.max(5,sv.h+(ev.clientY-sy));renderProps(item);} updEl(d,item); };
+            const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+            document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+        }
+        function updEl(d, i) { Object.assign(d.style, { left:i.x+'px', top:i.y+'px', width:i.width+'px', height:i.height+'px', fontSize:i.fontSize+'px', fontWeight:i.fontWeight, background:i.backgroundColor, border:i.border }); }
+        function selEl(i) { state.selected=i; document.querySelectorAll('.selected').forEach(x=>x.classList.remove('selected')); el(i.id).classList.add('selected'); renderProps(i); }
+        function renderProps(i) {
+            if (i.type === 'table') return renderTableProps(i);
+            el('props').innerHTML = `
+                <div class="form-group"><label>內容</label><input class="form-control" value="${i.content}" oninput="setProp('${i.id}','content',this.value)"></div>
+                <div class="form-group"><label>字體大小</label><input type="number" class="form-control" value="${i.fontSize}" oninput="setProp('${i.id}','fontSize',this.value)"></div>
+                <div class="form-group"><label>背景色</label><input type="color" style="width:100%" value="${i.backgroundColor==='transparent'?'#ffffff':i.backgroundColor}" oninput="setProp('${i.id}','backgroundColor',this.value)"></div>
+                <div class="form-group"><label>邊框</label><select class="form-control" onchange="setProp('${i.id}','border',this.value)"><option value="none">無</option><option value="1px solid #000">實線</option><option value="1px dashed #000">虛線</option></select></div>
+                <button class="btn btn-danger btn-block" onclick="delEl('${i.id}')">刪除</button>`;
+        }
+        window.setProp = (id, k, v) => { const i = state.elements.find(x => x.id === id); if (i) { i[k] = v; updEl(el(id), i); if (k === 'content') el(id).querySelector('.canvas-element-value').innerText = i.type === 'field' ? `[${v}]` : v; } };
         window.delEl = (id) => { state.elements = state.elements.filter(x => x.id !== id); el(id).remove(); el('props').innerHTML = ''; };
 
-        // --- File & Drag ---
+        // --- PDF & File ---
+        el('pdfBtn').onclick = () => el('pdfFile').click();
+        el('pdfFile').onchange = async (e) => {
+            const f = e.target.files[0]; if (!f) return;
+            if(!confirm('匯入 PDF 為底圖？')) return;
+            const pdf = await pdfjsLib.getDocument(await f.arrayBuffer()).promise;
+            const page = await pdf.getPage(1);
+            const vp = page.getViewport({ scale: 1.5 });
+            const cvs = document.createElement('canvas'); cvs.width = vp.width; cvs.height = vp.height;
+            await page.render({ canvasContext: cvs.getContext('2d'), viewport: vp }).promise;
+            const raw = page.getViewport({ scale: 1.0 });
+            state.config.size = 'custom'; state.config.w = raw.width * 0.3528; state.config.h = raw.height * 0.3528;
+            el('pageSize').value = 'custom';
+            el('canvas').style.backgroundImage = `url(${cvs.toDataURL()})`; el('canvas').style.backgroundSize = '100% 100%';
+            el('clearBgBtn').style.display = 'inline-block';
+            state.elements = []; el('canvas').innerHTML = '<div id="splitLine"></div>'; updSz();
+        };
+        el('clearBgBtn').onclick = () => { el('canvas').style.backgroundImage = 'none'; el('clearBgBtn').style.display = 'none'; };
         el('dataBtn').onclick = () => el('dataFile').click();
         el('dataFile').onchange = (e) => {
             const f = e.target.files[0]; if (!f) return;
             const r = new FileReader();
-            r.onload = (ev) => {
-                state.data = f.name.endsWith('.json') ? JSON.parse(ev.target.result) : parseCSV(ev.target.result);
-                state.fields = Object.keys(state.data[0] || {});
-                renderFields(); el('fileInfo').innerText = `✅ ${state.data.length} 筆資料`;
-            }; r.readAsText(f);
+            r.onload = (ev) => { state.data = f.name.endsWith('.json') ? JSON.parse(ev.target.result) : parseCSV(ev.target.result); state.fields = Object.keys(state.data[0] || {}); renderFields(); el('fileInfo').innerText = `✅ ${state.data.length} 筆`; }; r.readAsText(f);
         };
         function parseCSV(t) { const [h, ...r] = t.trim().split('\n'); const ks = h.split(',').map(s => s.trim()); return r.map(l => l.split(',').reduce((a, v, i) => ({ ...a, [ks[i]]: v.trim() }), {})); }
-        function renderFields() {
-            el('fieldList').innerHTML = state.fields.map(f => `<div class="field-item" draggable="true" data-f="${f}">📄 ${f}</div>`).join('');
-            el('grpField').innerHTML = `<option value="">--</option>` + state.fields.map(f => `<option value="${f}">${f}</option>`).join('');
-            initDrag();
-        }
+        function renderFields() { el('fieldList').innerHTML = state.fields.map(f => `<div class="field-item" draggable="true" data-f="${f}">📄 ${f}</div>`).join(''); el('grpField').innerHTML = `<option value="">--</option>` + state.fields.map(f => `<option value="${f}">${f}</option>`).join(''); initDrag(); }
         function initDrag() {
             el('fieldList').ondragstart = (e) => { e.dataTransfer.setData('type', 'field'); e.dataTransfer.setData('val', e.target.dataset.f); };
             el('canvas').ondragover = (e) => e.preventDefault();
@@ -331,44 +385,37 @@
             document.onmouseup = () => sp = false;
         }
         function updSplit() { el('splitLine').style.top = state.config.splitY + 'px'; }
-
-        // --- Settings ---
         el('mode').onchange = (e) => { state.config.mode = e.target.value; updMode(); };
-        function updMode() {
-            const m = state.config.mode;
-            el('grpSet').style.display = m === 'group' ? 'block' : 'none';
-            el('gridSet').style.display = m === 'grid' ? 'block' : 'none';
-            el('splitLine').style.display = m === 'group' ? 'block' : 'none';
-        }
+        function updMode() { const m = state.config.mode; el('grpSet').style.display = m === 'group' ? 'block' : 'none'; el('gridSet').style.display = m === 'grid' ? 'block' : 'none'; el('splitLine').style.display = m === 'group' ? 'block' : 'none'; }
         ['gCols', 'gRows', 'gX', 'gY'].forEach(k => el(k).onchange = (e) => state.config[k] = +e.target.value);
         el('splitY').onchange = (e) => { state.config.splitY = +e.target.value; updSplit(); };
         el('rowH').onchange = (e) => state.config.rowH = +e.target.value;
-
         window.autoCalcGrid = () => {
             if (!state.elements.length) return alert('空畫布');
             let mx = 0, my = 0; state.elements.forEach(e => { mx = Math.max(mx, e.x + e.width); my = Math.max(my, e.y + e.height); });
             const MM = 3.78, pW = state.config.w * MM, pH = state.config.h * MM, m = 5 * MM;
             const c = Math.floor((pW - m * 2 + state.config.gX) / (mx + state.config.gX));
             const r = Math.floor((pH - m * 2 + state.config.gY) / (my + state.config.gY));
-            if (c < 1 || r < 1) return alert('內容太大');
             state.config.gC = c; state.config.gR = r; el('gCols').value = c; el('gRows').value = r; alert(`計算: ${c}x${r}`);
         };
 
-        // --- Print ---
+        // --- Print Engine ---
         el('printBtn').onclick = () => {
             const c = el('print-container'); c.innerHTML = '';
             if (!state.data.length && state.elements.length) { const d = {}; state.fields.forEach(f => d[f] = `(${f})`); var old = state.data; state.data = [d]; runP(c); state.data = old; return; }
             if (!state.data.length) return alert('無數據');
             runP(c);
         };
-
         function runP(c) {
             const s = document.createElement('style'); s.innerHTML = `@media print{@page{size:${state.config.size === 'custom' ? 'auto' : state.config.size} ${state.config.orient};margin:0;}}`; c.appendChild(s);
             const m = state.config.mode;
-            if (m === 'single') pS(c); else if (m === 'group') pG(c); else if (m === 'grid') pGd(c);
+            if (m === 'single') pS(c);
+            else if (m === 'group') {
+                const hasVTable = state.elements.some(e => e.isTableHeader || e.isTableData);
+                if (hasVTable) pGWithGrid(c); else pG(c);
+            } else if (m === 'grid') pGd(c);
             setTimeout(() => { window.print(); c.innerHTML = ''; }, 500);
         }
-
         function mkPg() { const d = document.createElement('div'); d.className = 'print-page'; d.style.width = state.config.w + 'mm'; d.style.height = state.config.size === 'receipt80' ? 'auto' : state.config.h + 'mm'; return d; }
         function mkEl(item, r, dx = 0, dy = 0) {
             const d = document.createElement('div'); d.className = 'print-element';
@@ -376,17 +423,60 @@
             Object.assign(d.style, { left: fx + 'px', top: fy + 'px', width: item.width + 'px', height: item.height + 'px', fontSize: item.fontSize + 'px', fontWeight: item.fontWeight, background: item.backgroundColor, border: item.border });
             d.innerText = item.type === 'field' && r ? (r[item.fieldName] || '') : item.content; d.dataset.b = fy + item.height; return d;
         }
+        
+        // Smart Table Printing
+        function mkTblRow(t, rec, y, isH) {
+            const r = document.createElement('div'); r.style.cssText = `position:absolute; left:${t.x}px; top:${y}px; display:flex; height:${isH ? t.headerHeight : t.rowHeight}px;`;
+            const merges = t.mergedCells?.filter(m => m.row === (isH ? 0 : 1)) || [];
+            const skip = new Set();
+            (isH ? t.columns : t.fields).forEach((val, i) => {
+                if (skip.has(i)) return;
+                const m = merges.find(m => m.col === i);
+                let w = t.columnWidths[i], cs = 1;
+                if (m) { cs = m.colspan; w = 0; for (let k = i; k < i + cs && k < t.columnWidths.length; k++) { w += t.columnWidths[k]; if(k>i) skip.add(k); } }
+                const d = document.createElement('div');
+                d.style.cssText = `width:${w}px; border:${isH?t.headerBorder:t.cellBorder}; background:${isH?t.headerBg:'transparent'}; padding:5px; font-size:${t.fontSize}px; font-weight:${isH?t.headerFontWeight:'normal'}; display:flex; align-items:center; justify-content:${t.columnAligns[i]}; box-sizing:border-box;`;
+                d.innerText = isH ? val : (rec[val] || '');
+                r.appendChild(d);
+            });
+            return r;
+        }
 
-        function pS(c) { state.data.forEach(r => { const p = mkPg(); let mb = 0; state.elements.forEach(e => { const x = mkEl(e, r); p.appendChild(x); mb = Math.max(mb, +x.dataset.b); }); if (state.config.size === 'receipt80') p.style.height = (mb + 20) + 'px'; c.appendChild(p); }); }
+        function pS(c) { state.data.forEach(r => { const p = mkPg(); let mb = 0; state.elements.forEach(e => { if(e.type==='table')return; const x = mkEl(e, r); p.appendChild(x); mb = Math.max(mb, +x.dataset.b); }); if (state.config.size === 'receipt80') p.style.height = (mb + 20) + 'px'; c.appendChild(p); }); }
         function pG(c) {
             const g = {}, kf = state.config.grpF; state.data.forEach(r => { const k = kf ? r[kf] : 'A'; if (!g[k]) g[k] = []; g[k].push(r); });
-            const hE = state.elements.filter(e => e.y < state.config.splitY), dE = state.elements.filter(e => e.y >= state.config.splitY); dE.forEach(e => e.oy = e.y - state.config.splitY);
             const pH = state.config.size === 'receipt80' ? 99999 : 1050;
             Object.values(g).forEach(rs => {
-                let p = mkPg(), cm = 0; const rh = () => hE.forEach(e => { const x = mkEl(e, rs[0]); p.appendChild(x); cm = Math.max(cm, +x.dataset.b); }); rh();
-                let y = state.config.splitY;
-                rs.forEach(r => { if (y + state.config.rowH > pH) { p = mkPg(); c.appendChild(p); rh(); y = state.config.splitY; cm = y; } dE.forEach(e => { const x = mkEl(e, r, 0, y + e.oy - e.y); x.style.top = (y + e.oy) + 'px'; p.appendChild(x); cm = Math.max(cm, y + e.oy + e.height); }); y += state.config.rowH; });
-                if (state.config.size === 'receipt80') p.style.height = (cm + 50) + 'px';
+                let p = mkPg(), cy = 0;
+                rs.forEach((r, idx) => {
+                    state.elements.filter(e => e.type === 'table').forEach(t => {
+                        if (idx === 0) { p.appendChild(mkTblRow(t, null, t.y, true)); cy = t.y + t.headerHeight; }
+                        p.appendChild(mkTblRow(t, r, cy, false)); cy += t.rowHeight;
+                        if (cy > pH) { c.appendChild(p); p = mkPg(); p.appendChild(mkTblRow(t, null, t.y, true)); cy = t.y + t.headerHeight; }
+                    });
+                    state.elements.filter(e => e.type !== 'table').forEach(e => { if(idx===0) p.appendChild(mkEl(e, r)); });
+                });
+                c.appendChild(p);
+            });
+        }
+        function pGWithGrid(c) {
+            const g = {}, kf = state.config.grpF; state.data.forEach(r => { const k = kf ? r[kf] : 'A'; if (!g[k]) g[k] = []; g[k].push(r); });
+            const hE = state.elements.filter(e => e.y < state.config.splitY), dE = state.elements.filter(e => e.y >= state.config.splitY);
+            const pH = state.config.size === 'receipt80' ? 99999 : 1050;
+            Object.values(g).forEach(rs => {
+                let p = mkPg(), cy = state.config.splitY;
+                const rh = () => hE.forEach(e => { p.appendChild(mkEl(e, rs[0])); if(e.isTableHeader) genGL(e, e.width, e.height).forEach(l=>p.appendChild(renGL(l))); });
+                rh();
+                rs.forEach(r => {
+                    if (cy + state.config.rowH > pH) { c.appendChild(p); p = mkPg(); rh(); cy = state.config.splitY; }
+                    dE.forEach(e => {
+                        const oy = cy - state.config.splitY;
+                        const x = mkEl(e, r, 0, oy); x.style.top = (e.y + oy) + 'px'; p.appendChild(x);
+                        if (e.isTableData) genGL({...e, y:e.y+oy}, e.width, e.height).forEach(l=>p.appendChild(renGL(l)));
+                    });
+                    cy += state.config.rowH;
+                });
+                c.appendChild(p);
             });
         }
         function pGd(c) {
