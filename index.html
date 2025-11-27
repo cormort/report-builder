@@ -327,6 +327,7 @@
         }
 
         // --- Demo Loader (NEW) ---
+        // --- Demo Loader (修正版：增加頂部邊距) ---
         window.loadDemo = (type) => {
             if(!confirm('這將清除當前畫布與資料，載入範例？')) return;
             
@@ -336,21 +337,23 @@
             let demoData = [];
             
             if (type === 'invoice') {
-                // 三聯式發票範例
+                // 三聯式發票範例 (Y軸整體下移 40px)
                 demoData = [
                     {統編:'10622345', 客戶名稱:'台灣科技股份有限公司', 發票號碼:'AB12345678', 日期:'2025/01/15', 品名:'原子筆', 規格:'藍色', 數量:'10', 單價:'15', 金額:'150'},
                     {統編:'10622345', 客戶名稱:'台灣科技股份有限公司', 發票號碼:'AB12345678', 日期:'2025/01/15', 品名:'A4影印紙', 規格:'80磅', 數量:'2', 單價:'450', 金額:'900'}
                 ];
                 setPage('a4', 'portrait', 'group');
-                addElement('title', '電子計算機統一發票', 250, 30, 300, 30, 22, 'bold');
-                addElement('text', '買受人：', 40, 90, 60, 25, 12, 'bold');
-                addElement('field', '客戶名稱', 100, 90, 200, 25, 12, 'normal', '#eee', '1px solid #999');
-                addElement('text', '統一編號：', 500, 90, 80, 25, 12, 'bold');
-                addElement('field', '統編', 580, 90, 150, 25, 12, 'normal', '#eee', '1px solid #999');
+                // 標題從 30 改為 60
+                addElement('title', '電子計算機統一發票', 250, 60, 300, 30, 22, 'bold');
+                // 資訊從 90 改為 120
+                addElement('text', '買受人：', 40, 120, 60, 25, 12, 'bold');
+                addElement('field', '客戶名稱', 100, 120, 200, 25, 12, 'normal', '#eee', '1px solid #999');
+                addElement('text', '統一編號：', 500, 120, 80, 25, 12, 'bold');
+                addElement('field', '統編', 580, 120, 150, 25, 12, 'normal', '#eee', '1px solid #999');
                 
-                // Smart Table
+                // Smart Table (從 140 改為 180)
                 const tbl = {
-                    id: 'el-demo-tbl', type: 'table', x: 40, y: 140,
+                    id: 'el-demo-tbl', type: 'table', x: 40, y: 180,
                     columns: ['品名', '規格', '數量', '單價', '金額'],
                     fields: ['品名', '規格', '數量', '單價', '金額'],
                     columnWidths: [200, 100, 80, 100, 100],
@@ -360,11 +363,12 @@
                 state.elements.push(tbl);
                 renderTableElementAdvanced(tbl);
                 
-                state.config.splitY = 140;
+                // 分隔線位置也要同步更新
+                state.config.splitY = 180;
                 updSplit();
             }
             else if (type === 'label') {
-                // 標籤貼紙範例
+                // 標籤貼紙範例 (增加邊距)
                 demoData = [
                     {品名:'原子筆', 條碼:'4712345678901', 售價:'15'},
                     {品名:'A4影印紙', 條碼:'4712345678902', 售價:'450'},
@@ -375,16 +379,18 @@
                 state.config.gC = 2; state.config.gR = 4;
                 el('gCols').value = 2; el('gRows').value = 4;
                 
-                addElement('text', '', 0, 0, 350, 200, 12, 'normal', 'transparent', '2px solid #ccc');
-                addElement('title', '產品標籤', 20, 20, 150, 30, 16, 'bold');
-                addElement('text', '品名:', 20, 60, 50, 25, 12, 'bold');
-                addElement('field', '品名', 80, 60, 200, 25, 14, 'bold', '#eee');
-                addElement('text', '售價: $', 20, 100, 60, 25, 12, 'bold');
-                addElement('field', '售價', 80, 100, 100, 25, 14, 'normal', '#eee');
-                addElement('text', '||||||||||||||||||||', 20, 140, 200, 30, 20, 'normal'); // Fake barcode
+                // 外框從 0,0 改為 10,10
+                addElement('text', '', 10, 10, 350, 200, 12, 'normal', 'transparent', '2px solid #ccc');
+                // 內容整體下移
+                addElement('title', '產品標籤', 30, 30, 150, 30, 16, 'bold');
+                addElement('text', '品名:', 30, 70, 50, 25, 12, 'bold');
+                addElement('field', '品名', 90, 70, 200, 25, 14, 'bold', '#eee');
+                addElement('text', '售價: $', 30, 110, 60, 25, 12, 'bold');
+                addElement('field', '售價', 90, 110, 100, 25, 14, 'normal', '#eee');
+                addElement('text', '||||||||||||||||||||', 30, 150, 200, 30, 20, 'normal'); 
             }
             else if (type === 'shipping') {
-                // 出貨單範例
+                // 出貨單範例 (Y軸整體下移 40px)
                 demoData = [
                     {業務:'阿明', 客戶名稱:'台灣科技', 品名:'原子筆', 數量:'10', 單價:'15', 金額:'150', 日期:'2025/01/15'},
                     {業務:'阿明', 客戶名稱:'台灣科技', 品名:'A4紙', 數量:'2', 單價:'450', 金額:'900', 日期:'2025/01/15'},
@@ -393,14 +399,17 @@
                 setPage('a4', 'portrait', 'group');
                 state.config.grpF = '客戶名稱';
                 
-                addElement('title', '出貨單', 20, 20, 200, 40, 24, 'bold');
-                addElement('text', '客戶:', 20, 70, 50, 25, 12, 'bold');
-                addElement('field', '客戶名稱', 80, 70, 200, 25, 12, 'normal', '#eee');
-                addElement('text', '業務:', 300, 70, 50, 25, 12, 'bold');
-                addElement('field', '業務', 360, 70, 100, 25, 12, 'normal', '#eee');
+                // 標題從 20 改為 50
+                addElement('title', '出貨單', 20, 50, 200, 40, 24, 'bold');
+                // 資訊從 70 改為 100
+                addElement('text', '客戶:', 20, 100, 50, 25, 12, 'bold');
+                addElement('field', '客戶名稱', 80, 100, 200, 25, 12, 'normal', '#eee');
+                addElement('text', '業務:', 300, 100, 50, 25, 12, 'bold');
+                addElement('field', '業務', 360, 100, 100, 25, 12, 'normal', '#eee');
                 
+                // 表格從 110 改為 150
                 const tbl = {
-                    id: 'el-demo-ship', type: 'table', x: 20, y: 110,
+                    id: 'el-demo-ship', type: 'table', x: 20, y: 150,
                     columns: ['品名', '數量', '單價', '金額'],
                     fields: ['品名', '數量', '單價', '金額'],
                     columnWidths: [250, 80, 100, 100],
@@ -410,21 +419,22 @@
                 state.elements.push(tbl);
                 renderTableElementAdvanced(tbl);
                 
-                state.config.splitY = 110;
+                state.config.splitY = 150;
                 updSplit();
             }
             else if (type === 'receipt') {
-                // 收據範例
+                // 收據範例 (微調)
                 demoData = [
                     {品名:'原子筆', 數量:'10', 單價:'15', 金額:'150'},
                     {品名:'A4影印紙', 數量:'2', 單價:'450', 金額:'900'}
                 ];
                 setPage('receipt80', 'portrait', 'group');
-                addElement('title', '歡迎光臨', 10, 10, 200, 30, 16, 'bold');
-                addElement('text', '--------------------------', 0, 40, 250, 20);
+                // 下移至 20
+                addElement('title', '歡迎光臨', 10, 20, 200, 30, 16, 'bold');
+                addElement('text', '--------------------------', 0, 50, 250, 20);
                 
                 const tbl = {
-                    id: 'el-demo-rec', type: 'table', x: 0, y: 60,
+                    id: 'el-demo-rec', type: 'table', x: 0, y: 80,
                     columns: ['品名', '數量', '金額'],
                     fields: ['品名', '數量', '金額'],
                     columnWidths: [120, 50, 80],
@@ -434,17 +444,17 @@
                 state.elements.push(tbl);
                 renderTableElementAdvanced(tbl);
                 
-                state.config.splitY = 60;
+                state.config.splitY = 80;
                 updSplit();
             }
-
+        
             // Load Data
             state.data = demoData;
             state.fields = Object.keys(demoData[0]);
             renderFields();
             el('fileInfo').innerText = `✅ 已載入範例資料 (${state.data.length} 筆)`;
             
-            // Switch to Data Tab to show fields
+            // Switch to Data Tab
             document.querySelector('[data-tab="tab1"]').click();
         };
 
