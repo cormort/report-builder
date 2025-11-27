@@ -190,404 +190,411 @@
     <div id="print-container"></div>
 
     <script>
-        // State
-        const state = {
-            fields: [],
-            elements: [],
-            data: [],
-            selectedElement: null,
-            previewMode: false,
-            config: {
-                mode: 'single', // 'single' or 'group'
-                groupField: '',
-                splitY: 150,
-                rowHeight: 40
-            }
-        };
+    // State
+    const state = {
+        fields: [],
+        elements: [],
+        data: [],
+        selectedElement: null,
+        previewMode: false,
+        config: {
+            mode: 'single', // 'single' or 'group'
+            groupField: '',
+            splitY: 150,
+            rowHeight: 40
+        }
+    };
 
-        // DOM
-        const canvas = document.getElementById('canvas');
-        const splitLine = document.getElementById('splitLine');
-        const splitYInput = document.getElementById('splitYInput');
-        const reportMode = document.getElementById('reportMode');
-        const groupSettings = document.getElementById('groupSettings');
-        const groupFieldSelect = document.getElementById('groupFieldSelect');
+    // DOM
+    const canvas = document.getElementById('canvas');
+    const splitLine = document.getElementById('splitLine');
+    const splitYInput = document.getElementById('splitYInput');
+    const reportMode = document.getElementById('reportMode');
+    const groupSettings = document.getElementById('groupSettings');
+    const groupFieldSelect = document.getElementById('groupFieldSelect');
 
-        // Init
-        setupDragAndDrop();
-        setupSplitLine();
+    // Init
+    setupDragAndDrop();
+    setupSplitLine();
 
-        // 1. Upload Logic
-        document.getElementById('uploadArea').onclick = () => document.getElementById('fileInput').click();
-        document.getElementById('fileInput').onchange = (e) => {
-            const file = e.target.files[0];
-            if(!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
+    // 1. Upload Logic
+    document.getElementById('uploadArea').onclick = () => document.getElementById('fileInput').click();
+    document.getElementById('fileInput').onchange = (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
                 if(file.name.endsWith('.json')) state.data = JSON.parse(e.target.result);
                 else state.data = parseCSV(e.target.result);
                 
                 extractFields();
                 showMessage(`✅ 載入 ${state.data.length} 筆資料`);
-            };
-            reader.readAsText(file);
+            } catch(err) {
+                showMessage(`❌ 錯誤: ${err.message}`);
+            }
         };
+        reader.readAsText(file);
+    };
 
-        function parseCSV(csv) {
-            const lines = csv.trim().split('\n');
-            const headers = lines[0].split(',').map(h => h.trim());
-            return lines.slice(1).map(line => {
-                const values = line.split(',');
-                return headers.reduce((obj, h, i) => ({...obj, [h]: values[i]?.trim() || ''}), {});
-            });
-        }
+    function parseCSV(csv) {
+        const lines = csv.trim().split('\n');
+        const headers = lines[0].split(',').map(h => h.trim());
+        return lines.slice(1).map(line => {
+            const values = line.split(',');
+            return headers.reduce((obj, h, i) => ({...obj, [h]: values[i]?.trim() || ''}), {});
+        });
+    }
 
-        function extractFields() {
-            if(!state.data.length) return;
-            state.fields = Object.keys(state.data[0]);
-            
-            // Render Field List
-            const list = document.getElementById('fieldList');
-            list.innerHTML = state.fields.map(f => `
-                <div class="field-item" draggable="true" data-field="${f}">
-                    <span>📊 ${f}</span>
-                </div>
-            `).join('');
-            
-            // Render Group Select
+    // ========== 修正重點 1: extractFields (移除舊的監聽器呼叫) ==========
+    function extractFields() {
+        if(!state.data.length) return;
+        state.fields = Object.keys(state.data[0]);
+        
+        // Render Field List
+        const list = document.getElementById('fieldList');
+        list.innerHTML = state.fields.map(f => `
+            <div class="field-item" draggable="true" data-field="${f}">
+                <span>📊 ${f}</span>
+            </div>
+        `).join('');
+        
+        // Render Group Select
+        if(groupFieldSelect) {
             groupFieldSelect.innerHTML = `<option value="">-- 請選擇 --</option>` + 
                 state.fields.map(f => `<option value="${f}">${f}</option>`).join('');
-            
-            addDragListeners();
         }
+    }
 
-        // 2. Settings Logic
-        reportMode.addEventListener('change', (e) => {
-            state.config.mode = e.target.value;
-            if(state.config.mode === 'group') {
-                groupSettings.style.display = 'block';
-                splitLine.style.display = 'block';
-            } else {
-                groupSettings.style.display = 'none';
-                splitLine.style.display = 'none';
-            }
-        });
+    // 2. Settings Logic
+    reportMode.addEventListener('change', (e) => {
+        state.config.mode = e.target.value;
+        if(state.config.mode === 'group') {
+            groupSettings.style.display = 'block';
+            splitLine.style.display = 'block';
+        } else {
+            groupSettings.style.display = 'none';
+            splitLine.style.display = 'none';
+        }
+    });
 
-        splitYInput.addEventListener('change', (e) => {
-            const y = parseInt(e.target.value);
-            state.config.splitY = y;
+    splitYInput.addEventListener('change', (e) => {
+        const y = parseInt(e.target.value);
+        state.config.splitY = y;
+        splitLine.style.top = y + 'px';
+    });
+
+    document.getElementById('rowHeightInput').addEventListener('change', (e) => {
+        state.config.rowHeight = parseInt(e.target.value);
+    });
+    
+    document.getElementById('groupFieldSelect').addEventListener('change', (e) => {
+        state.config.groupField = e.target.value;
+    });
+
+    function setupSplitLine() {
+        let isDragging = false;
+        splitLine.addEventListener('mousedown', () => isDragging = true);
+        document.addEventListener('mousemove', (e) => {
+            if(!isDragging) return;
+            const rect = canvas.getBoundingClientRect();
+            let y = e.clientY - rect.top;
+            y = Math.max(0, Math.min(y, 1100)); // Limit
             splitLine.style.top = y + 'px';
+            splitYInput.value = Math.round(y);
+            state.config.splitY = y;
+        });
+        document.addEventListener('mouseup', () => isDragging = false);
+    }
+
+    // ========== 修正重點 2: setupDragAndDrop (改用事件委派，更穩定) ==========
+    function setupDragAndDrop() {
+        // 來源：綁定在父層列表
+        const fieldList = document.getElementById('fieldList');
+        
+        fieldList.addEventListener('dragstart', (e) => {
+            const item = e.target.closest('.field-item');
+            if(!item) return;
+
+            e.dataTransfer.effectAllowed = 'copy';
+            e.dataTransfer.setData('type', 'field');
+            e.dataTransfer.setData('content', item.dataset.field);
+            item.style.opacity = '0.5';
         });
 
-        document.getElementById('rowHeightInput').addEventListener('change', (e) => {
-            state.config.rowHeight = parseInt(e.target.value);
+        fieldList.addEventListener('dragend', (e) => {
+            const item = e.target.closest('.field-item');
+            if(item) item.style.opacity = '1';
+        });
+
+        // 目的：畫布
+        canvas.addEventListener('dragover', e => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
         });
         
-        document.getElementById('groupFieldSelect').addEventListener('change', (e) => {
-            state.config.groupField = e.target.value;
+        canvas.addEventListener('drop', e => {
+            e.preventDefault();
+            const type = e.dataTransfer.getData('type');
+            const content = e.dataTransfer.getData('content');
+            
+            if(!type) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            addElement(type, content, x, y);
         });
+    }
 
-        function setupSplitLine() {
-            let isDragging = false;
-            splitLine.addEventListener('mousedown', () => isDragging = true);
-            document.addEventListener('mousemove', (e) => {
-                if(!isDragging) return;
-                const rect = canvas.getBoundingClientRect();
-                let y = e.clientY - rect.top;
-                y = Math.max(0, Math.min(y, 1100)); // Limit
-                splitLine.style.top = y + 'px';
-                splitYInput.value = Math.round(y);
-                state.config.splitY = y;
-            });
-            document.addEventListener('mouseup', () => isDragging = false);
-        }
+    document.getElementById('addTextBtn').onclick = () => addElement('text', '文字內容', 50, 50);
+    document.getElementById('addTitleBtn').onclick = () => addElement('title', '報表標題', 50, 20);
 
-        // 3. Canvas Logic
-        function addDragListeners() {
-            document.querySelectorAll('.field-item').forEach(item => {
-                item.addEventListener('dragstart', (e) => {
-                    e.dataTransfer.setData('type', 'field');
-                    e.dataTransfer.setData('content', item.dataset.field);
-                });
-            });
-        }
+    // ========== 修正重點 3: addElement & renderElement (修復 type reference error) ==========
+    function addElement(type, content, x, y) {
+        const el = {
+            id: 'el-' + Date.now(),
+            type, content, x, y, 
+            width: 150, height: 30, 
+            fontSize: 14, fontWeight: 'normal',
+            fieldName: type === 'field' ? content : null
+        };
+        state.elements.push(el);
+        renderElement(el);
+    }
 
-        function setupDragAndDrop() {
-            canvas.addEventListener('dragover', e => e.preventDefault());
-            canvas.addEventListener('drop', e => {
-                e.preventDefault();
-                const type = e.dataTransfer.getData('type');
-                const content = e.dataTransfer.getData('content');
-                const rect = canvas.getBoundingClientRect();
-                addElement(type, content, e.clientX - rect.left, e.clientY - rect.top);
-            });
-        }
-
-        document.getElementById('addTextBtn').onclick = () => addElement('text', '文字內容', 50, 50);
-        document.getElementById('addTitleBtn').onclick = () => addElement('title', '報表標題', 50, 20);
-
-        function addElement(type, content, x, y) {
-            const el = {
-                id: 'el-' + Date.now(),
-                type, content, x, y, 
-                width: 150, height: 30, 
-                fontSize: 14, fontWeight: 'normal',
-                fieldName: type === 'field' ? content : null
-            };
-            state.elements.push(el);
-            renderElement(el);
-        }
-
-        function renderElement(el) {
-            const div = document.createElement('div');
-            div.id = el.id;
-            div.className = 'canvas-element';
-            div.style.left = el.x + 'px';
-            div.style.top = el.y + 'px';
-            div.style.width = el.width + 'px';
-            div.style.height = el.height + 'px';
-            div.style.fontSize = el.fontSize + 'px';
-            div.style.fontWeight = el.fontWeight;
+    function renderElement(el) {
+        const div = document.createElement('div');
+        div.id = el.id;
+        div.className = 'canvas-element';
+        div.style.left = el.x + 'px';
+        div.style.top = el.y + 'px';
+        div.style.width = el.width + 'px';
+        div.style.height = el.height + 'px';
+        div.style.fontSize = el.fontSize + 'px';
+        div.style.fontWeight = el.fontWeight;
+        
+        // 這裡確保使用 el.type
+        div.innerHTML = `<div class="canvas-element-value">${el.type === 'field' ? `[${el.content}]` : el.content}</div><div class="resize-handle"></div>`;
+        
+        // Selection
+        div.onmousedown = (e) => {
+            if(e.target.classList.contains('resize-handle')) return;
+            e.stopPropagation();
+            selectElement(el, div);
             
-            div.innerHTML = `<div class="canvas-element-value">${el.type === 'field' ? `[${el.content}]` : el.content}</div><div class="resize-handle"></div>`;
+            // Dragging
+            let startX = e.clientX, startY = e.clientY;
+            let origX = el.x, origY = el.y;
             
-            // Selection
-            div.onmousedown = (e) => {
-                if(e.target.classList.contains('resize-handle')) return;
-                e.stopPropagation();
-                selectElement(el, div);
-                
-                // Dragging
-                let startX = e.clientX, startY = e.clientY;
-                let origX = el.x, origY = el.y;
-                
-                const moveHandler = (em) => {
-                    el.x = origX + (em.clientX - startX);
-                    el.y = origY + (em.clientY - startY);
-                    div.style.left = el.x + 'px';
-                    div.style.top = el.y + 'px';
-                };
-                const upHandler = () => {
-                    document.removeEventListener('mousemove', moveHandler);
-                    document.removeEventListener('mouseup', upHandler);
-                };
-                document.addEventListener('mousemove', moveHandler);
-                document.addEventListener('mouseup', upHandler);
+            const moveHandler = (em) => {
+                el.x = origX + (em.clientX - startX);
+                el.y = origY + (em.clientY - startY);
+                div.style.left = el.x + 'px';
+                div.style.top = el.y + 'px';
             };
-
-            // Resizing
-            const handle = div.querySelector('.resize-handle');
-            handle.onmousedown = (e) => {
-                e.stopPropagation();
-                let startX = e.clientX, startY = e.clientY;
-                let origW = el.width, origH = el.height;
-                
-                const resizeMove = (em) => {
-                    el.width = Math.max(20, origW + (em.clientX - startX));
-                    el.height = Math.max(20, origH + (em.clientY - startY));
-                    div.style.width = el.width + 'px';
-                    div.style.height = el.height + 'px';
-                };
-                const resizeUp = () => {
-                    document.removeEventListener('mousemove', resizeMove);
-                    document.removeEventListener('mouseup', resizeUp);
-                };
-                document.addEventListener('mousemove', resizeMove);
-                document.addEventListener('mouseup', resizeUp);
+            const upHandler = () => {
+                document.removeEventListener('mousemove', moveHandler);
+                document.removeEventListener('mouseup', upHandler);
             };
-
-            canvas.appendChild(div);
-        }
-
-        function selectElement(el, div) {
-            document.querySelectorAll('.canvas-element').forEach(d => d.classList.remove('selected'));
-            div.classList.add('selected');
-            state.selectedElement = el;
-            renderProperties(el);
-        }
-
-        function renderProperties(el) {
-            const panel = document.getElementById('propertyPanel');
-            panel.innerHTML = `
-                <div class="property-group">
-                    <label class="property-label">內容 / 欄位</label>
-                    <input class="property-input" value="${el.content}" onchange="updateProp('${el.id}', 'content', this.value)">
-                </div>
-                <div class="property-group">
-                    <label class="property-label">字體大小</label>
-                    <input type="number" class="property-input" value="${el.fontSize}" onchange="updateProp('${el.id}', 'fontSize', this.value)">
-                </div>
-                <div class="property-group">
-                    <label class="property-label">粗細</label>
-                    <select class="property-select" onchange="updateProp('${el.id}', 'fontWeight', this.value)">
-                        <option value="normal" ${el.fontWeight === 'normal'?'selected':''}>正常</option>
-                        <option value="bold" ${el.fontWeight === 'bold'?'selected':''}>粗體</option>
-                    </select>
-                </div>
-                <button class="btn btn-danger" style="width:100%" onclick="deleteElement('${el.id}')">刪除元素</button>
-            `;
-        }
-
-        window.updateProp = (id, prop, val) => {
-            const el = state.elements.find(e => e.id === id);
-            if(el) {
-                el[prop] = val;
-                const div = document.getElementById(id);
-                if(prop === 'content') div.querySelector('.canvas-element-value').innerText = val;
-                if(prop === 'fontSize') div.style.fontSize = val + 'px';
-                if(prop === 'fontWeight') div.style.fontWeight = val;
-            }
+            document.addEventListener('mousemove', moveHandler);
+            document.addEventListener('mouseup', upHandler);
         };
 
-        window.deleteElement = (id) => {
-            state.elements = state.elements.filter(e => e.id !== id);
-            document.getElementById(id).remove();
-            document.getElementById('propertyPanel').innerHTML = '';
+        // Resizing
+        const handle = div.querySelector('.resize-handle');
+        handle.onmousedown = (e) => {
+            e.stopPropagation();
+            let startX = e.clientX, startY = e.clientY;
+            let origW = el.width, origH = el.height;
+            
+            const resizeMove = (em) => {
+                el.width = Math.max(20, origW + (em.clientX - startX));
+                el.height = Math.max(20, origH + (em.clientY - startY));
+                div.style.width = el.width + 'px';
+                div.style.height = el.height + 'px';
+            };
+            const resizeUp = () => {
+                document.removeEventListener('mousemove', resizeMove);
+                document.removeEventListener('mouseup', resizeUp);
+            };
+            document.addEventListener('mousemove', resizeMove);
+            document.addEventListener('mouseup', resizeUp);
         };
 
-        // 4. PRINT LOGIC (Core Feature)
-        document.getElementById('printBtn').onclick = () => {
-            const container = document.getElementById('print-container');
-            container.innerHTML = '';
+        canvas.appendChild(div);
+    }
 
-            if(!state.data || state.data.length === 0) {
-                alert('請先上傳資料');
+    function selectElement(el, div) {
+        document.querySelectorAll('.canvas-element').forEach(d => d.classList.remove('selected'));
+        div.classList.add('selected');
+        state.selectedElement = el;
+        renderProperties(el);
+    }
+
+    function renderProperties(el) {
+        const panel = document.getElementById('propertyPanel');
+        panel.innerHTML = `
+            <div class="property-group">
+                <label class="property-label">內容 / 欄位</label>
+                <input class="property-input" value="${el.content}" onchange="updateProp('${el.id}', 'content', this.value)">
+            </div>
+            <div class="property-group">
+                <label class="property-label">字體大小</label>
+                <input type="number" class="property-input" value="${el.fontSize}" onchange="updateProp('${el.id}', 'fontSize', this.value)">
+            </div>
+            <div class="property-group">
+                <label class="property-label">粗細</label>
+                <select class="property-select" onchange="updateProp('${el.id}', 'fontWeight', this.value)">
+                    <option value="normal" ${el.fontWeight === 'normal'?'selected':''}>正常</option>
+                    <option value="bold" ${el.fontWeight === 'bold'?'selected':''}>粗體</option>
+                </select>
+            </div>
+            <button class="btn btn-danger" style="width:100%" onclick="deleteElement('${el.id}')">刪除元素</button>
+        `;
+    }
+
+    window.updateProp = (id, prop, val) => {
+        const el = state.elements.find(e => e.id === id);
+        if(el) {
+            el[prop] = val;
+            const div = document.getElementById(id);
+            if(prop === 'content') div.querySelector('.canvas-element-value').innerText = val;
+            if(prop === 'fontSize') div.style.fontSize = val + 'px';
+            if(prop === 'fontWeight') div.style.fontWeight = val;
+        }
+    };
+
+    window.deleteElement = (id) => {
+        state.elements = state.elements.filter(e => e.id !== id);
+        document.getElementById(id).remove();
+        document.getElementById('propertyPanel').innerHTML = '<div style="text-align: center; color: #999; padding: 20px 0;">點擊元素編輯</div>';
+    };
+
+    // 4. PRINT LOGIC
+    document.getElementById('printBtn').onclick = () => {
+        const container = document.getElementById('print-container');
+        container.innerHTML = '';
+
+        if(!state.data || state.data.length === 0) {
+            alert('請先上傳資料');
+            return;
+        }
+
+        if(state.config.mode === 'single') {
+            printSingleMode(container);
+        } else {
+            if(!state.config.groupField) {
+                alert('請選擇分組欄位 (例如員工姓名)');
                 return;
             }
-
-            if(state.config.mode === 'single') {
-                printSingleMode(container);
-            } else {
-                if(!state.config.groupField) {
-                    alert('請選擇分組欄位 (例如員工姓名)');
-                    return;
-                }
-                printGroupMode(container);
-            }
-
-            setTimeout(() => window.print(), 500);
-        };
-
-        function createPrintElement(def, content, customY = null) {
-            const div = document.createElement('div');
-            div.className = 'print-element';
-            div.innerText = content;
-            div.style.left = def.x + 'px';
-            div.style.top = (customY !== null ? customY : def.y) + 'px';
-            div.style.width = def.width + 'px';
-            div.style.height = def.height + 'px';
-            div.style.fontSize = def.fontSize + 'px';
-            div.style.fontWeight = def.fontWeight;
-            return div;
+            printGroupMode(container);
         }
 
-        // Mode A: Mail Merge (One Page Per Record)
-        function printSingleMode(container) {
-            state.data.forEach(row => {
-                const page = document.createElement('div');
-                page.className = 'print-page';
-                
-                state.elements.forEach(el => {
+        setTimeout(() => window.print(), 500);
+    };
+
+    function createPrintElement(def, content, customY = null) {
+        const div = document.createElement('div');
+        div.className = 'print-element';
+        div.innerText = content;
+        div.style.left = def.x + 'px';
+        div.style.top = (customY !== null ? customY : def.y) + 'px';
+        div.style.width = def.width + 'px';
+        div.style.height = def.height + 'px';
+        div.style.fontSize = def.fontSize + 'px';
+        div.style.fontWeight = def.fontWeight;
+        return div;
+    }
+
+    // Mode A: Mail Merge
+    function printSingleMode(container) {
+        state.data.forEach(row => {
+            const page = document.createElement('div');
+            page.className = 'print-page';
+            
+            state.elements.forEach(el => {
+                let text = el.content;
+                if(el.type === 'field' && row[el.fieldName] !== undefined) {
+                    text = row[el.fieldName];
+                }
+                page.appendChild(createPrintElement(el, text));
+            });
+            container.appendChild(page);
+        });
+    }
+
+    // Mode B: Master-Detail (Grouped List)
+    function printGroupMode(container) {
+        // Group Data
+        const groups = {};
+        state.data.forEach(row => {
+            const key = row[state.config.groupField] || 'Uncategorized';
+            if(!groups[key]) groups[key] = [];
+            groups[key].push(row);
+        });
+
+        const splitY = state.config.splitY;
+        const rowHeight = state.config.rowHeight;
+        const A4Height = 1122; 
+        const marginBottom = 50;
+
+        const headerEls = state.elements.filter(e => e.y < splitY);
+        const detailEls = state.elements.filter(e => e.y >= splitY);
+
+        detailEls.forEach(el => el.offsetY = el.y - splitY);
+
+        Object.keys(groups).forEach(groupKey => {
+            const rows = groups[groupKey];
+            
+            let currentPage = document.createElement('div');
+            currentPage.className = 'print-page';
+            container.appendChild(currentPage);
+
+            const renderHeader = (pageObj, firstRow) => {
+                headerEls.forEach(el => {
+                    let text = el.content;
+                    if(el.type === 'field' && firstRow[el.fieldName] !== undefined) {
+                        text = firstRow[el.fieldName];
+                    }
+                    pageObj.appendChild(createPrintElement(el, text));
+                });
+            };
+
+            renderHeader(currentPage, rows[0]);
+            let currentY = splitY;
+
+            rows.forEach(row => {
+                if(currentY + rowHeight > A4Height - marginBottom) {
+                    currentPage = document.createElement('div');
+                    currentPage.className = 'print-page';
+                    container.appendChild(currentPage);
+                    renderHeader(currentPage, rows[0]);
+                    currentY = splitY;
+                }
+
+                detailEls.forEach(el => {
                     let text = el.content;
                     if(el.type === 'field' && row[el.fieldName] !== undefined) {
                         text = row[el.fieldName];
                     }
-                    page.appendChild(createPrintElement(el, text));
+                    const dynamicY = currentY + el.offsetY;
+                    const elDiv = createPrintElement(el, text, dynamicY);
+                    currentPage.appendChild(elDiv);
                 });
-                container.appendChild(page);
+
+                currentY += rowHeight;
             });
-        }
+        });
+    }
 
-        // Mode B: Master-Detail (Grouped List)
-        function printGroupMode(container) {
-            // 1. Group Data
-            const groups = {};
-            state.data.forEach(row => {
-                const key = row[state.config.groupField] || 'Uncategorized';
-                if(!groups[key]) groups[key] = [];
-                groups[key].push(row);
-            });
-
-            const splitY = state.config.splitY;
-            const rowHeight = state.config.rowHeight;
-            const A4Height = 1122; // approx height in px for A4 at 96dpi (297mm)
-            const marginBottom = 50;
-
-            // Identify Header vs Detail Elements
-            const headerEls = state.elements.filter(e => e.y < splitY);
-            const detailEls = state.elements.filter(e => e.y >= splitY);
-
-            // Shift detail elements relative to splitY (for template calculation)
-            detailEls.forEach(el => el.offsetY = el.y - splitY);
-
-            // 2. Iterate Groups
-            Object.keys(groups).forEach(groupKey => {
-                const rows = groups[groupKey];
-                
-                let currentPage = document.createElement('div');
-                currentPage.className = 'print-page';
-                container.appendChild(currentPage);
-
-                // Helper: Render Header (uses data from the FIRST row of the group)
-                const renderHeader = (pageObj, firstRow) => {
-                    headerEls.forEach(el => {
-                        let text = el.content;
-                        if(el.type === 'field' && firstRow[el.fieldName] !== undefined) {
-                            text = firstRow[el.fieldName];
-                        }
-                        pageObj.appendChild(createPrintElement(el, text));
-                    });
-                };
-
-                // Init first page of this group
-                renderHeader(currentPage, rows[0]);
-                let currentY = splitY;
-
-                // 3. Render Rows
-                rows.forEach(row => {
-                    // Check if page overflow
-                    if(currentY + rowHeight > A4Height - marginBottom) {
-                        // Create New Page
-                        currentPage = document.createElement('div');
-                        currentPage.className = 'print-page';
-                        container.appendChild(currentPage);
-                        
-                        // Repeat Header
-                        renderHeader(currentPage, rows[0]);
-                        currentY = splitY; // Reset Y
-                    }
-
-                    // Render Detail Columns
-                    detailEls.forEach(el => {
-                        let text = el.content;
-                        if(el.type === 'field' && row[el.fieldName] !== undefined) {
-                            text = row[el.fieldName];
-                        }
-                        // Important: Y is calculated dynamically
-                        const dynamicY = currentY + el.offsetY; // maintain relative layout inside row
-                        const elDiv = createPrintElement(el, text, dynamicY);
-                        // Force height to be rowHeight to ensure alignment
-                        // elDiv.style.height = rowHeight + 'px'; 
-                        currentPage.appendChild(elDiv);
-                    });
-
-                    currentY += rowHeight;
-                });
-            });
-        }
-
-        function showMessage(msg) {
-            const m = document.getElementById('message');
-            m.className = 'message info';
-            m.innerText = msg;
-            setTimeout(() => m.innerText = '', 3000);
-        }
-        
-        document.getElementById('clearBtn').onclick = () => {
-            state.elements = [];
-            canvas.innerHTML = '<div id="splitLine" style="top: 150px;"></div><div class="canvas-label" style="position: absolute; top:5px; right:5px; color:#ccc;">A4</div>';
-            setupSplitLine();
-        }
-    </script>
+    function showMessage(msg) {
+        const m = document.getElementById('message');
+        m.className = 'message info';
+        m.innerText = msg;
+        setTimeout(() => m.innerText = '', 3000);
+    }
+</script>
 </body>
 </html>
