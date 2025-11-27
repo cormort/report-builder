@@ -143,7 +143,8 @@
             border: 1px solid #ddd;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             position: relative;
-            padding: 20px;
+            padding: 0; /* 列印時避免內距影響 */
+            overflow: hidden;
         }
         .canvas-label {
             position: absolute;
@@ -163,8 +164,10 @@
             min-height: 20px;
             transition: all 0.2s;
             resize: both;
-            overflow: auto;
+            overflow: hidden; /* 改為 hidden 避免捲軸 */
             user-select: none;
+            display: flex;
+            align-items: center; /* 垂直置中 */
         }
         .canvas-element:hover {
             box-shadow: 0 0 8px rgba(33, 150, 243, 0.3);
@@ -173,15 +176,12 @@
             border-color: var(--danger);
             box-shadow: 0 0 12px rgba(244, 67, 54, 0.4);
         }
-        .canvas-element-label {
-            font-size: 11px;
-            color: #666;
-            margin-bottom: 4px;
-        }
         .canvas-element-value {
-            font-size: 13px;
-            color: var(--primary);
-            font-weight: 500;
+            font-size: inherit;
+            color: inherit;
+            font-weight: inherit;
+            width: 100%;
+            pointer-events: none; /* 讓點擊穿透到父元素 */
         }
         .resize-handle {
             position: absolute;
@@ -353,36 +353,47 @@
                 grid-column: 1;
             }
         }
-                /* 列印樣式 */
+
+        /* ========== 修正後的列印樣式 ========== */
         @media print {
-            body * {
+            /* 1. 隱藏 body 下的所有內容，但這不是 display: none，而是 visibility: hidden */
+            /* 這樣可以保留文檔流結構，避免某些瀏覽器渲染問題 */
+            body {
                 visibility: hidden;
+                background: white;
             }
             
+            /* 2. 特別指定 canvas 和其子元素可見 */
             .canvas, .canvas * {
                 visibility: visible;
             }
             
+            /* 3. 將 canvas 強制定位到頁面最左上角 */
             .canvas {
-                position: absolute;
-                left: 0;
+                position: fixed;
                 top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
                 margin: 0;
-                padding: 20px;
-                width: 210mm;
-                height: 297mm;
+                padding: 0;
                 border: none;
                 box-shadow: none;
+                background: white;
+                z-index: 9999;
             }
             
+            /* 4. 關鍵：保留 absolute 定位，但移除編輯時的邊框和背景 */
             .canvas-element {
-                background: transparent !important;
-                border: none !important;
+                /* position: absolute;  這裡不需要重寫，繼承原本的 CSS 即可 */
+                background: transparent !important; /* 強制背景透明 */
+                border: none !important; /* 移除藍色邊框 */
                 box-shadow: none !important;
+                resize: none; /* 移除調整大小的手柄 */
             }
-            
-            .canvas-label,
-            .resize-handle {
+
+            /* 隱藏 A4 標籤和調整大小的手柄 */
+            .canvas-label, .resize-handle {
                 display: none !important;
             }
         }
@@ -396,7 +407,6 @@
         </div>
 
         <div class="main-layout">
-            <!-- 左側面板 -->
             <div class="panel left-panel">
                 <div class="panel-title">📁 數據源</div>
                 
@@ -417,7 +427,6 @@
                 </div>
             </div>
 
-            <!-- 中央面板 - 畫布 -->
             <div class="panel canvas-panel">
                 <div class="panel-title">🎨 設計畫布</div>
                 <div style="margin-bottom: 15px; display: flex; gap: 8px;">
@@ -435,7 +444,6 @@
                 </div>
             </div>
 
-            <!-- 右側面板 - 屬性設定 -->
             <div class="panel right-panel">
                 <div class="panel-title">⚙️ 屬性設定</div>
                 <div id="propertyPanel" style="text-align: center; color: #999; padding: 30px 0;">
@@ -460,6 +468,7 @@
             previewMode: false,
             data: null
         };
+
         // ============ DOM 元素 ============
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
@@ -467,6 +476,7 @@
         const canvas = document.getElementById('canvas');
         const propertyPanel = document.getElementById('propertyPanel');
         const messageDiv = document.getElementById('message');
+
         // ============ 文件上傳 ============
         uploadArea.addEventListener('click', () => fileInput.click());
         uploadArea.addEventListener('dragover', (e) => {
@@ -484,6 +494,7 @@
         fileInput.addEventListener('change', (e) => {
             handleFileUpload(e.target.files[0]);
         });
+
         function handleFileUpload(file) {
             if (!file) return;
             const reader = new FileReader();
@@ -507,6 +518,7 @@
             };
             reader.readAsText(file);
         }
+
         function parseCSV(csv) {
             const lines = csv.trim().split('\n');
             const headers = lines[0].split(',').map(h => h.trim());
@@ -523,6 +535,7 @@
             
             return data;
         }
+
         function extractFields(data) {
             state.fields = [];
             
@@ -533,6 +546,7 @@
             }
             renderFieldList();
         }
+
         function renderFieldList() {
             fieldList.innerHTML = state.fields.length === 0 
                 ? '<div style="color: #999; text-align: center; padding: 20px; font-size: 13px;">沒有可用欄位</div>'
@@ -542,6 +556,7 @@
                         <span>${field}</span>
                     </div>
                 `).join('');
+
             // 拖拽事件
             document.querySelectorAll('.field-item').forEach(item => {
                 item.addEventListener('dragstart', (e) => {
@@ -555,8 +570,10 @@
                 });
             });
         }
+
         // ============ 畫布操作 ============
         let elementCounter = 0;
+
         function createCanvasElement(type, fieldName = null) {
             const id = `elem-${elementCounter++}`;
             const element = {
@@ -574,13 +591,16 @@
                 border: '1px solid #2186c4',
                 content: type === 'text' ? '文字內容' : (type === 'title' ? '報表標題' : `[${fieldName || '欄位'}]`)
             };
+            
             state.elements.push(element);
             renderElement(element);
             return element;
         }
+
         function renderElement(element) {
             const existing = document.getElementById(element.id);
             if (existing) existing.remove();
+
             const div = document.createElement('div');
             div.id = element.id;
             div.className = 'canvas-element';
@@ -592,28 +612,36 @@
             div.style.fontWeight = element.fontWeight;
             div.style.color = element.color;
             div.style.backgroundColor = element.backgroundColor;
+            // 只有在非列印模式下顯示邊框，但這裡我們先設在 style，CSS print 會 override
             div.style.border = element.border;
+            
             const content = document.createElement('div');
             content.className = 'canvas-element-value';
             content.textContent = element.content;
             div.appendChild(content);
+
             div.addEventListener('click', (e) => {
                 e.stopPropagation();
                 selectElement(element, div);
             });
+
             makeDraggable(div, element);
             makeResizable(div, element);
+
             canvas.appendChild(div);
         }
+
         function makeDraggable(element, dataElement) {
             let isDragging = false;
             let offsetX = 0, offsetY = 0;
+
             element.addEventListener('mousedown', (e) => {
                 if (e.target.classList.contains('resize-handle')) return;
                 isDragging = true;
                 offsetX = e.clientX - element.offsetLeft;
                 offsetY = e.clientY - element.offsetTop;
             });
+
             document.addEventListener('mousemove', (e) => {
                 if (!isDragging) return;
                 dataElement.x = e.clientX - offsetX;
@@ -621,15 +649,19 @@
                 element.style.left = dataElement.x + 'px';
                 element.style.top = dataElement.y + 'px';
             });
+
             document.addEventListener('mouseup', () => {
                 isDragging = false;
             });
         }
+
         function makeResizable(element, dataElement) {
             const handle = document.createElement('div');
             handle.className = 'resize-handle';
             element.appendChild(handle);
+
             let isResizing = false;
+
             handle.addEventListener('mousedown', (e) => {
                 e.stopPropagation();
                 isResizing = true;
@@ -637,6 +669,7 @@
                 const startY = e.clientY;
                 const startWidth = element.offsetWidth;
                 const startHeight = element.offsetHeight;
+
                 const handleMove = (e) => {
                     if (!isResizing) return;
                     dataElement.width = Math.max(60, startWidth + (e.clientX - startX));
@@ -644,24 +677,29 @@
                     element.style.width = dataElement.width + 'px';
                     element.style.height = dataElement.height + 'px';
                 };
+
                 const handleUp = () => {
                     isResizing = false;
                     document.removeEventListener('mousemove', handleMove);
                     document.removeEventListener('mouseup', handleUp);
                 };
+
                 document.addEventListener('mousemove', handleMove);
                 document.addEventListener('mouseup', handleUp);
             });
         }
+
         function selectElement(element, domElement) {
             // 清除之前的選擇
             document.querySelectorAll('.canvas-element.selected').forEach(el => {
                 el.classList.remove('selected');
             });
+            
             state.selectedElement = element;
             domElement.classList.add('selected');
             renderPropertyPanel(element);
         }
+
         canvas.addEventListener('click', () => {
             document.querySelectorAll('.canvas-element.selected').forEach(el => {
                 el.classList.remove('selected');
@@ -669,27 +707,38 @@
             state.selectedElement = null;
             propertyPanel.innerHTML = '<div style="text-align: center; color: #999; padding: 30px 0;">選擇畫布中的元素進行編輯</div>';
         });
+
         // ============ 拖放到畫布 ============
         canvas.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'copy';
         });
+
         canvas.addEventListener('drop', (e) => {
             e.preventDefault();
             const fieldName = e.dataTransfer.getData('text/plain');
+            
             if (fieldName && state.fields.includes(fieldName)) {
+                // 計算相對畫布的座標
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
                 const element = createCanvasElement('field', fieldName);
-                element.x = e.clientX - canvas.getBoundingClientRect().left;
-                element.y = e.clientY - canvas.getBoundingClientRect().top;
+                element.x = x;
+                element.y = y;
+                
                 const domElement = document.getElementById(element.id);
                 domElement.style.left = element.x + 'px';
                 domElement.style.top = element.y + 'px';
             }
         });
+
         // ============ 按鈕事件 ============
         document.getElementById('addTextBtn').addEventListener('click', () => {
             createCanvasElement('text');
         });
+
         document.getElementById('addFieldBtn').addEventListener('click', () => {
             if (state.fields.length === 0) {
                 showMessage('❌ 請先上傳數據檔案', 'error');
@@ -697,17 +746,21 @@
             }
             createCanvasElement('field', state.fields[0]);
         });
+
         document.getElementById('addTitleBtn').addEventListener('click', () => {
             createCanvasElement('title');
         });
+
         document.getElementById('previewBtn').addEventListener('click', () => {
             state.previewMode = !state.previewMode;
             document.getElementById('canvas').classList.toggle('preview-mode');
             document.getElementById('previewBtn').textContent = state.previewMode ? '✏️ 編輯' : '👁️ 預覽';
         });
+
         document.getElementById('printBtn').addEventListener('click', () => {
             window.print();
         });
+
         document.getElementById('saveBtn').addEventListener('click', () => {
             const config = {
                 fields: state.fields,
@@ -723,6 +776,7 @@
             a.click();
             showMessage('✅ 配置已保存', 'success');
         });
+
         document.getElementById('loadBtn').addEventListener('click', () => {
             const input = document.createElement('input');
             input.type = 'file';
@@ -748,6 +802,7 @@
             };
             input.click();
         });
+
         document.getElementById('clearBtn').addEventListener('click', () => {
             if (confirm('確認清除所有元素？')) {
                 state.elements = [];
@@ -757,6 +812,7 @@
                 showMessage('✅ 已清除', 'success');
             }
         });
+
         // ============ 屬性面板 ============
         function renderPropertyPanel(element) {
             const html = `
@@ -805,7 +861,9 @@
                     <button class="btn btn-danger btn-block" id="deleteBtn">🗑️ 刪除</button>
                 </div>
             `;
+            
             propertyPanel.innerHTML = html;
+
             // 綁定屬性改變事件
             if (element.type === 'field') {
                 document.getElementById('fieldSelect').addEventListener('change', (e) => {
@@ -815,31 +873,37 @@
                     selectElement(element, document.getElementById(element.id));
                 });
             }
+
             document.getElementById('contentInput').addEventListener('change', (e) => {
                 element.content = e.target.value;
                 renderElement(element);
                 selectElement(element, document.getElementById(element.id));
             });
+
             document.getElementById('fontSizeInput').addEventListener('change', (e) => {
                 element.fontSize = parseInt(e.target.value);
                 renderElement(element);
                 selectElement(element, document.getElementById(element.id));
             });
+
             document.getElementById('fontWeightSelect').addEventListener('change', (e) => {
                 element.fontWeight = e.target.value;
                 renderElement(element);
                 selectElement(element, document.getElementById(element.id));
             });
+
             document.getElementById('colorInput').addEventListener('change', (e) => {
                 element.color = e.target.value;
                 renderElement(element);
                 selectElement(element, document.getElementById(element.id));
             });
+
             document.getElementById('bgColorInput').addEventListener('change', (e) => {
                 element.backgroundColor = e.target.value || 'transparent';
                 renderElement(element);
                 selectElement(element, document.getElementById(element.id));
             });
+
             document.getElementById('deleteBtn').addEventListener('click', () => {
                 state.elements = state.elements.filter(el => el.id !== element.id);
                 document.getElementById(element.id).remove();
@@ -848,6 +912,7 @@
                 showMessage('✅ 已刪除', 'success');
             });
         }
+
         // ============ 訊息提示 ============
         function showMessage(text, type = 'info') {
             messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
