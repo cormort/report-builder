@@ -179,18 +179,21 @@
 
     <div id="print-container"></div>
 
-    <script>
-        // --- State ---
+        <script>
+        // ==========================================
+        // 1. 全局狀態 (State)
+        // ==========================================
         const state = {
             fields: [], elements: [], data: [], selectedElement: null,
             config: {
                 pageSize: 'a4', orientation: 'portrait',
                 widthMm: 210, heightMm: 297,
-                mode: 'single', groupField: '', splitY: 150, rowHeight: 30,
+                mode: 'single', // single, group, grid
+                groupField: '', splitY: 150, rowHeight: 30,
                 gridCols: 2, gridRows: 4, gridGapX: 10, gridGapY: 10
             }
         };
-
+    
         const els = {
             canvas: document.getElementById('canvas'),
             fieldList: document.getElementById('fieldList'),
@@ -200,44 +203,63 @@
             sizeSelect: document.getElementById('pageSizeSelect'),
             orientSelect: document.getElementById('orientationSelect')
         };
-
+    
+        // 初始化執行
         initCanvas();
-        initDrag();
-        
-        // --- 1. Canvas ---
+        initDrag(); // 修正：現在下方有定義這個函式了，不會再報錯
+    
+        // ==========================================
+        // 2. 畫布與紙張設定
+        // ==========================================
         function initCanvas() {
             updateCanvasSize();
             els.sizeSelect.onchange = (e) => { state.config.pageSize = e.target.value; updateCanvasSize(); };
             els.orientSelect.onchange = (e) => { state.config.orientation = e.target.value; updateCanvasSize(); };
         }
+    
         function updateCanvasSize() {
-            const sizeMap = { 'a4': [210, 297], 'a5': [148, 210], 'letter': [216, 279], 'receipt80': [80, 297] };
+            const sizeMap = {
+                'a4': [210, 297], 'a5': [148, 210], 'letter': [216, 279], 'receipt80': [80, 297]
+            };
             let [w, h] = sizeMap[state.config.pageSize] || [state.config.widthMm, state.config.heightMm];
-            if (state.config.orientation === 'landscape' && state.config.pageSize !== 'receipt80' && state.config.pageSize !== 'custom') [w, h] = [h, w];
-            state.config.widthMm = w; state.config.heightMm = h;
-            els.canvas.style.width = w + 'mm'; els.canvas.style.height = h + 'mm';
+            
+            // 橫向處理 (收據與自訂除外)
+            if (state.config.orientation === 'landscape' && state.config.pageSize !== 'receipt80' && state.config.pageSize !== 'custom') {
+                [w, h] = [h, w];
+            }
+    
+            state.config.widthMm = w;
+            state.config.heightMm = h;
+            
+            els.canvas.style.width = w + 'mm';
+            els.canvas.style.height = h + 'mm';
+    
             if(state.config.pageSize === 'receipt80') {
-                els.canvas.style.height = 'auto'; els.canvas.style.minHeight = '150mm'; els.canvas.style.borderBottom = '3px jagged #ccc';
+                els.canvas.style.height = 'auto';
+                els.canvas.style.minHeight = '150mm';
+                els.canvas.style.borderBottom = '3px jagged #ccc';
+            } else {
+                els.canvas.style.borderBottom = 'none';
             }
         }
-
-        // --- 2. PDF Import Logic (NEW) ---
+    
+        // ==========================================
+        // 3. PDF 匯入與偵測邏輯
+        // ==========================================
         document.getElementById('pdfUploadBtn').onclick = () => document.getElementById('pdfFile').click();
         document.getElementById('pdfFile').onchange = async (e) => {
             const file = e.target.files[0];
             if(!file) return;
-
+    
             if(!confirm('是否匯入 PDF？\n1. 將清除當前畫布\n2. 第一頁將設為背景\n3. 自動偵測文字框線')) return;
-
+    
             try {
                 const arrayBuffer = await file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
                 const page = await pdf.getPage(1);
                 
-                // 1. Get Scale and Viewport
-                const viewport = page.getViewport({ scale: 1.5 }); // High res for background
-                
-                // 2. Render to Canvas for Background Image
+                // 1. 設定背景 (解析度 1.5 倍以求清晰)
+                const viewport = page.getViewport({ scale: 1.5 }); 
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
                 canvas.height = viewport.height;
@@ -246,11 +268,14 @@
                 await page.render({ canvasContext: context, viewport: viewport }).promise;
                 const bgDataUrl = canvas.toDataURL();
                 
-                // 3. Set App Canvas Size & Background
-                // Convert PDF pt to mm (1 pt = 0.352778 mm)
-                const pdfW_mm = viewport.width / 1.5 * 0.352778; 
-                const pdfH_mm = viewport.height / 1.5 * 0.352778;
+                // 轉換 PDF 點數 (pt) 到 毫米 (mm)
+                // 1 pt = 0.352778 mm
+                // Viewport width 已經是 scale 過的，我們要用原始尺寸算 mm
+                const rawViewport = page.getViewport({ scale: 1.0 });
+                const pdfW_mm = rawViewport.width * 0.352778; 
+                const pdfH_mm = rawViewport.height * 0.352778;
                 
+                // 設定畫布尺寸
                 state.config.pageSize = 'custom';
                 state.config.widthMm = pdfW_mm;
                 state.config.heightMm = pdfH_mm;
@@ -262,158 +287,371 @@
                 
                 document.getElementById('pageSizeSelect').value = 'custom';
                 document.getElementById('clearBgBtn').style.display = 'inline-block';
-
-                // 4. Clear old elements
+    
+                // 清空舊元素
                 state.elements = [];
                 els.canvas.innerHTML = '<div id="splitLine"></div>';
-
-                // 5. Detect Text for Bounding Boxes
-                // Use a standard scale=1 viewport for calculating coordinates
-                const textViewport = page.getViewport({ scale: 1.0 });
+    
+                // 2. 偵測文字框 (OCR-like)
                 const textContent = await page.getTextContent();
-                
-                // Convert px to mm for app coordinates
-                const pxToMm = 0.352778; // PDF units are usually points
-
+                const pxToMm = 0.352778; 
+    
                 textContent.items.forEach(item => {
-                    // Check if item has width/height (sometimes empty)
                     if (item.str.trim().length === 0) return;
-
-                    // item.transform [scaleX, skewY, skewX, scaleY, tx, ty]
-                    // PDF coordinates: origin at bottom-left
-                    // App coordinates: origin at top-left
-                    
+    
+                    // PDF 座標轉換: 原點在左下 -> 轉為左上
                     const tx = item.transform[4];
                     const ty = item.transform[5];
                     
-                    // Simple conversion (approximate bounding box)
-                    // Note: PDF text rendering is complex. We approximate a box.
                     const x = tx * pxToMm;
-                    const y = (textViewport.height - ty - item.height) * pxToMm; // Flip Y
+                    const y = (rawViewport.height - ty - item.height) * pxToMm; 
                     const w = item.width * pxToMm;
-                    const h = Math.max(item.height * pxToMm, 5); // Ensure min height
-
-                    // Create "Box" element
-                    // We make it slightly larger for padding
+                    const h = Math.max(item.height * pxToMm, 5);
+    
+                    // 產生藍色虛線框
                     addElement('text', '', x - 1, y - 1, w + 2, h + 2, 10, 'normal', 'transparent', '1px dashed #2186c4');
                 });
-
-                alert('✅ PDF 匯入成功！\n藍色虛線框為偵測到的文字區域，您可以將其改為欄位。');
-
+    
+                alert('✅ PDF 匯入成功！藍色虛線框為偵測到的文字區域。');
+    
             } catch (err) {
                 console.error(err);
                 alert('❌ PDF 解析失敗：' + err.message);
             }
         };
-
+    
         document.getElementById('clearBgBtn').onclick = () => {
             els.canvas.style.backgroundImage = 'linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px)';
             els.canvas.style.backgroundSize = '20px 20px';
             document.getElementById('clearBgBtn').style.display = 'none';
         };
-
-        // --- 3. Auto Grid & Elements ---
+    
+        // ==========================================
+        // 4. 自動計算版面 (Auto Grid)
+        // ==========================================
         window.autoCalcGrid = () => {
             if(state.elements.length===0) return alert('畫布是空的');
             let mx=0,my=0; state.elements.forEach(e=>{mx=Math.max(mx,e.x+e.width);my=Math.max(my,e.y+e.height);});
-            const MM=3.78, pW=state.config.widthMm*MM, pH=state.config.heightMm*MM, m=5*MM;
-            const uW=pW-m*2, uH=pH-m*2, gX=state.config.gridGapX, gY=state.config.gridGapY;
-            const c=Math.floor((uW+gX)/(mx+gX)), r=Math.floor((uH+gY)/(my+gY));
-            if(c<1||r<1) return alert('內容太大');
-            state.config.gridCols=c; state.config.gridRows=r;
-            document.getElementById('gridCols').value=c; document.getElementById('gridRows').value=r;
-            alert(`計算完成: ${c}x${r}=${c*r} 張`);
+            
+            // 1mm = 3.78px
+            const MM = 3.78;
+            const pW = state.config.widthMm * MM;
+            const pH = state.config.heightMm * MM;
+            const margin = 5 * MM; // 5mm 安全邊距
+    
+            const uW = pW - margin*2;
+            const uH = pH - margin*2;
+            const gX = state.config.gridGapX;
+            const gY = state.config.gridGapY;
+    
+            const c = Math.floor((uW + gX) / (mx + gX));
+            const r = Math.floor((uH + gY) / (my + gY));
+    
+            if(c < 1 || r < 1) return alert('內容太大，無法放入當前紙張');
+    
+            state.config.gridCols = c;
+            state.config.gridRows = r;
+            document.getElementById('gridCols').value = c;
+            document.getElementById('gridRows').value = r;
+            
+            alert(`計算完成: ${c}欄 x ${r}列 = ${c*r} 張 (已扣除安全邊距)`);
         };
-
-        // --- Templates ---
+    
+        // ==========================================
+        // 5. 快速模版 (Templates)
+        // ==========================================
         window.tpl = (type) => {
             if(!confirm('清除畫布？')) return;
             state.elements=[]; els.canvas.innerHTML='<div id="splitLine"></div>';
-            if(type==='labels'){ setPage('a4','portrait','grid'); addElement('text','',0,0,300,180,12,'normal','transparent','2px solid #ccc'); addElement('text','品名:',10,50,50,25,12,'bold'); }
-            else if(type==='tw_b2b'){ setPage('a4','portrait','group'); addElement('title','統一發票',250,30,200,30,22,'bold'); state.config.splitY=140; ['品名','單價'].forEach((h,i)=>addElement('text',h,40+i*100,115,100,25)); updateSplitLine(); }
-            else if(type==='tw_einvoice'){ setPage('receipt80','portrait','group'); addElement('title','電子發票',30,20,150,30,18,'bold'); state.config.splitY=100; updateSplitLine(); }
-            else if(type==='table'){ setPage('a4','portrait','group'); addElement('title','報表',20,20,200,40,24,'bold'); state.config.splitY=80; updateSplitLine(); }
+            
+            if(type==='labels'){
+                setPage('a4','portrait','grid');
+                addElement('text','',0,0,300,180,12,'normal','transparent','2px solid #ccc');
+                addElement('text','品名:',10,50,50,25,12,'bold');
+            }
+            else if(type==='tw_b2b'){
+                setPage('a4','portrait','group');
+                addElement('title','統一發票',250,30,200,30,22,'bold');
+                state.config.splitY=140;
+                ['品名','單價'].forEach((h,i)=>addElement('text',h,40+i*100,115,100,25));
+                updateSplitLine();
+            }
+            else if(type==='tw_einvoice'){
+                setPage('receipt80','portrait','group');
+                addElement('title','電子發票',30,20,150,30,18,'bold');
+                state.config.splitY=100;
+                updateSplitLine();
+            }
+            else if(type==='table'){
+                setPage('a4','portrait','group');
+                addElement('title','報表',20,20,200,40,24,'bold');
+                state.config.splitY=80;
+                updateSplitLine();
+            }
         };
-        function setPage(s,o,m){ els.sizeSelect.value=state.config.pageSize=s; els.orientSelect.value=state.config.orientation=o; els.modeSelect.value=state.config.mode=m; updateCanvasSize(); updateSettingsUI(); }
-
-        // --- Settings ---
+    
+        function setPage(s,o,m){
+            els.sizeSelect.value = state.config.pageSize = s;
+            els.orientSelect.value = state.config.orientation = o;
+            els.modeSelect.value = state.config.mode = m;
+            updateCanvasSize();
+            updateSettingsUI();
+        }
+    
+        // ==========================================
+        // 6. 設定面板與元素 CRUD
+        // ==========================================
         els.modeSelect.onchange=(e)=>{state.config.mode=e.target.value; updateSettingsUI();};
-        function updateSettingsUI(){ const m=state.config.mode; document.getElementById('groupSettings').style.display=m==='group'?'block':'none'; document.getElementById('gridSettings').style.display=m==='grid'?'block':'none'; els.splitLine.style.display=m==='group'?'block':'none'; }
+        
+        function updateSettingsUI(){
+            const m=state.config.mode;
+            document.getElementById('groupSettings').style.display=m==='group'?'block':'none';
+            document.getElementById('gridSettings').style.display=m==='grid'?'block':'none';
+            els.splitLine.style.display=m==='group'?'block':'none';
+        }
+    
         ['gridCols','gridRows','gridGapX','gridGapY'].forEach(id=>document.getElementById(id).onchange=(e)=>state.config[id]=+e.target.value);
         document.getElementById('splitYInput').onchange=(e)=>{state.config.splitY=+e.target.value; updateSplitLine();};
         document.getElementById('rowHeightInput').onchange=(e)=>state.config.rowHeight=+e.target.value;
-
-        // --- Elements ---
+    
         document.getElementById('addTextBtn').onclick=()=>addElement('text','文字',20,20);
         document.getElementById('addTitleBtn').onclick=()=>addElement('title','標題',20,20,150,40,20,'bold');
         document.getElementById('addBoxBtn').onclick=()=>addElement('text','',50,50,100,100,12,'normal','transparent','2px solid #333');
-
+    
         function addElement(type,c,x,y,w=120,h=30,fs=14,fw='normal',bg='transparent',br='1px dashed #ccc'){
             const el={id:'el-'+Math.random().toString(36).substr(2,9),type,content:c,x,y,width:w,height:h,fontSize:fs,fontWeight:fw,backgroundColor:bg,border:br,fieldName:type==='field'?c:null};
             state.elements.push(el); renderEl(el); return el;
         }
+    
         function renderEl(el){
             const d=document.createElement('div'); d.id=el.id; d.className='canvas-element'; updateElStyle(d,el);
             d.innerHTML=`<div class="canvas-element-value">${el.type==='field'?`[${el.content}]`:el.content}</div><div class="resize-handle"></div>`;
-            d.onmousedown=(e)=>{if(e.target.classList.contains('resize-handle'))return; e.stopPropagation(); selectEl(el); const sx=e.clientX,sy=e.clientY,ox=el.x,oy=el.y; const mv=(ev)=>{el.x=ox+(ev.clientX-sx);el.y=oy+(ev.clientY-sy);updateElStyle(d,el);}; const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);}; document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);};
-            d.querySelector('.resize-handle').onmousedown=(e)=>{e.stopPropagation(); const sx=e.clientX,sy=e.clientY,ow=el.width,oh=el.height; const rz=(ev)=>{el.width=Math.max(10,ow+(ev.clientX-sx));el.height=Math.max(10,oh+(ev.clientY-sy));updateElStyle(d,el);renderProps(el);}; const st=()=>{document.removeEventListener('mousemove',rz);document.removeEventListener('mouseup',st);}; document.addEventListener('mousemove',rz);document.addEventListener('mouseup',st);};
+            
+            d.onmousedown=(e)=>{
+                if(e.target.classList.contains('resize-handle'))return;
+                e.stopPropagation(); selectEl(el);
+                const sx=e.clientX,sy=e.clientY,ox=el.x,oy=el.y;
+                const mv=(ev)=>{el.x=ox+(ev.clientX-sx);el.y=oy+(ev.clientY-sy);updateElStyle(d,el);};
+                const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+                document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+            };
+    
+            d.querySelector('.resize-handle').onmousedown=(e)=>{
+                e.stopPropagation();
+                const sx=e.clientX,sy=e.clientY,ow=el.width,oh=el.height;
+                const rz=(ev)=>{el.width=Math.max(10,ow+(ev.clientX-sx));el.height=Math.max(10,oh+(ev.clientY-sy));updateElStyle(d,el);renderProps(el);};
+                const st=()=>{document.removeEventListener('mousemove',rz);document.removeEventListener('mouseup',st);};
+                document.addEventListener('mousemove',rz);document.addEventListener('mouseup',st);
+            };
             els.canvas.appendChild(d);
         }
-        function updateElStyle(d,el){ d.style.left=el.x+'px'; d.style.top=el.y+'px'; d.style.width=el.width+'px'; d.style.height=el.height+'px'; d.style.fontSize=el.fontSize+'px'; d.style.fontWeight=el.fontWeight; d.style.background=el.backgroundColor; d.style.border=el.border; }
-        function selectEl(el){ state.selectedElement=el; document.querySelectorAll('.canvas-element').forEach(d=>d.classList.remove('selected')); document.getElementById(el.id).classList.add('selected'); renderProps(el); }
+    
+        function updateElStyle(d,el){
+            d.style.left=el.x+'px'; d.style.top=el.y+'px'; d.style.width=el.width+'px'; d.style.height=el.height+'px';
+            d.style.fontSize=el.fontSize+'px'; d.style.fontWeight=el.fontWeight; d.style.background=el.backgroundColor; d.style.border=el.border;
+        }
+    
+        function selectEl(el){
+            state.selectedElement=el;
+            document.querySelectorAll('.canvas-element').forEach(d=>d.classList.remove('selected'));
+            document.getElementById(el.id).classList.add('selected');
+            renderProps(el);
+        }
+    
         function renderProps(el){
             els.propPanel.innerHTML=`
                 <div class="form-group"><label class="form-label">內容</label><input class="form-control" value="${el.content}" oninput="setProp('${el.id}','content',this.value)"></div>
+                <div class="form-group"><label class="form-label">字體大小</label><input type="number" class="form-control" value="${el.fontSize}" oninput="setProp('${el.id}','fontSize',this.value)"></div>
                 <div class="form-group"><label class="form-label">背景色</label><input type="color" style="width:100%" value="${el.backgroundColor==='transparent'?'#ffffff':el.backgroundColor}" oninput="setProp('${el.id}','backgroundColor',this.value)"></div>
                 <div class="form-group"><label class="form-label">邊框</label><select class="form-control" onchange="setProp('${el.id}','border',this.value)"><option value="none">無</option><option value="1px solid #000">實線</option><option value="1px dashed #2186c4">藍虛線</option></select></div>
                 <button class="btn btn-danger btn-block" onclick="delEl('${el.id}')">刪除</button>`;
         }
-        window.setProp=(id,k,v)=>{const el=state.elements.find(e=>e.id===id); if(el){el[k]=v; updateElStyle(document.getElementById(id),el); if(k==='content')document.getElementById(id).querySelector('.canvas-element-value').innerText=el.type==='field'?`[${v}]`:v;}};
+    
+        window.setProp=(id,k,v)=>{
+            const el=state.elements.find(e=>e.id===id);
+            if(el){el[k]=v; updateElStyle(document.getElementById(id),el); if(k==='content')document.getElementById(id).querySelector('.canvas-element-value').innerText=el.type==='field'?`[${v}]`:v;}
+        };
         window.delEl=(id)=>{state.elements=state.elements.filter(e=>e.id!==id); document.getElementById(id).remove(); els.propPanel.innerHTML='';};
-
-        // --- Data ---
+    
+        // ==========================================
+        // 7. 檔案與拖曳邏輯 (這就是之前報錯的部分，現在修復了)
+        // ==========================================
         document.getElementById('dataUploadBtn').onclick=()=>document.getElementById('dataFile').click();
         document.getElementById('dataFile').onchange=(e)=>{
-            const f=e.target.files[0]; if(!f)return; const r=new FileReader();
-            r.onload=(ev)=>{ state.data=f.name.endsWith('.json')?JSON.parse(ev.target.result):parseCSV(ev.target.result); state.fields=Object.keys(state.data[0]||{}); renderFields(); document.getElementById('fileInfo').innerText=`✅ ${state.data.length} 筆`; }; r.readAsText(f);
+            const f=e.target.files[0]; if(!f)return;
+            const r=new FileReader();
+            r.onload=(ev)=>{
+                state.data=f.name.endsWith('.json')?JSON.parse(ev.target.result):parseCSV(ev.target.result);
+                state.fields=Object.keys(state.data[0]||{});
+                renderFields();
+                document.getElementById('fileInfo').innerText=`✅ ${state.data.length} 筆數據`;
+            };
+            r.readAsText(f);
         };
+    
         function parseCSV(t){const [h,...r]=t.trim().split('\n'); const ks=h.split(',').map(s=>s.trim()); return r.map(l=>l.split(',').reduce((a,v,i)=>({...a,[ks[i]]:v.trim()}),{}));}
-        function renderFields(){ els.fieldList.innerHTML=state.fields.map(f=>`<div class="field-item" draggable="true" data-f="${f}">📄 ${f}</div>`).join(''); const sel=document.getElementById('groupFieldSelect'); sel.innerHTML=`<option value="">--</option>`+state.fields.map(f=>`<option value="${f}">${f}</option>`).join('');}
-        
-        // --- Drag ---
-        els.fieldList.addEventListener('dragstart',e=>{e.dataTransfer.setData('type','field');e.dataTransfer.setData('val',e.target.dataset.f);});
-        els.canvas.addEventListener('dragover',e=>e.preventDefault());
-        els.canvas.addEventListener('drop',e=>{e.preventDefault(); const t=e.dataTransfer.getData('type'); if(t)addElement(t,e.dataTransfer.getData('val'),e.clientX-els.canvas.getBoundingClientRect().left,e.clientY-els.canvas.getBoundingClientRect().top);});
-        let spd=false; els.splitLine.onmousedown=()=>spd=true; document.onmousemove=(e)=>{if(spd){state.config.splitY=Math.max(0,e.clientY-els.canvas.getBoundingClientRect().top);updateSplitLine();document.getElementById('splitYInput').value=Math.round(state.config.splitY);}}; document.onmouseup=()=>spd=false;
+        function renderFields(){
+            els.fieldList.innerHTML=state.fields.map(f=>`<div class="field-item" draggable="true" data-f="${f}">📄 ${f}</div>`).join('');
+            const sel=document.getElementById('groupFieldSelect');
+            sel.innerHTML=`<option value="">--</option>`+state.fields.map(f=>`<option value="${f}">${f}</option>`).join('');
+        }
+    
+        // ★★★ 修正點：補回 initDrag 函式定義 ★★★
+        function initDrag() {
+            els.fieldList.addEventListener('dragstart',e=>{
+                e.dataTransfer.setData('type','field');
+                e.dataTransfer.setData('val',e.target.dataset.f);
+            });
+            els.canvas.addEventListener('dragover',e=>e.preventDefault());
+            els.canvas.addEventListener('drop',e=>{
+                e.preventDefault();
+                const t=e.dataTransfer.getData('type');
+                if(t) addElement(t, e.dataTransfer.getData('val'), e.clientX-els.canvas.getBoundingClientRect().left, e.clientY-els.canvas.getBoundingClientRect().top);
+            });
+    
+            let spd=false;
+            els.splitLine.onmousedown=()=>spd=true;
+            document.addEventListener('mousemove', (e)=>{
+                if(spd){
+                    state.config.splitY=Math.max(0, e.clientY-els.canvas.getBoundingClientRect().top);
+                    updateSplitLine();
+                    document.getElementById('splitYInput').value=Math.round(state.config.splitY);
+                }
+            });
+            document.addEventListener('mouseup', ()=>spd=false);
+        }
+    
         function updateSplitLine(){els.splitLine.style.top=state.config.splitY+'px';}
-
-        // --- Print ---
+    
+        // ==========================================
+        // 8. 列印核心
+        // ==========================================
         document.getElementById('printBtn').onclick=()=>{
             const ctr=document.getElementById('print-container'); ctr.innerHTML='';
-            if(!state.data.length && state.elements.length){ const dummy={}; state.fields.forEach(f=>dummy[f]=`(預覽${f})`); var oldD=state.data; state.data=[dummy]; runP(ctr); state.data=oldD; return; }
-            if(!state.data.length)return alert('無數據'); runP(ctr);
+            // 預覽功能：無數據時用假資料
+            if(!state.data.length && state.elements.length){ 
+                const dummy={}; state.fields.forEach(f=>dummy[f]=`(預覽${f})`); 
+                var oldD=state.data; state.data=[dummy]; 
+                runP(ctr); 
+                state.data=oldD; return; 
+            }
+            if(!state.data.length)return alert('無數據');
+            runP(ctr);
         };
+    
         function runP(ctr){
-            const s=document.createElement('style'); s.innerHTML=`@media print{@page{size:${state.config.pageSize==='custom'?'auto':state.config.pageSize} ${state.config.orientation};margin:0;}}`; ctr.appendChild(s);
-            const m=state.config.mode; if(m==='single')pS(ctr); else if(m==='group')pG(ctr); else if(m==='grid')pGd(ctr);
-            setTimeout(()=>{window.print();ctr.innerHTML='';},500);
+            const s=document.createElement('style');
+            s.innerHTML=`@media print{@page{size:${state.config.pageSize==='custom'?'auto':state.config.pageSize} ${state.config.orientation};margin:0;}}`;
+            ctr.appendChild(s);
+            
+            const m=state.config.mode;
+            if(m==='single') pS(ctr);
+            else if(m==='group') pG(ctr);
+            else if(m==='grid') pGd(ctr);
+            
+            setTimeout(()=>{
+                window.print();
+                ctr.innerHTML='';
+            },500);
         }
-        function cP(){const d=document.createElement('div');d.className='print-page';d.style.width=state.config.widthMm+'mm';d.style.height=state.config.pageSize==='receipt80'?'auto':state.config.heightMm+'mm';return d;}
-        function cE(el,r,dx=0,dy=0){const d=document.createElement('div');d.className='print-element';d.style.left=(el.x+dx)+'px';d.style.top=(el.y+dy)+'px';d.style.width=el.width+'px';d.style.height=el.height+'px';d.style.fontSize=el.fontSize+'px';d.style.fontWeight=el.fontWeight;d.style.background=el.backgroundColor;d.style.border=el.border;d.innerText=el.type==='field'&&r?(r[el.fieldName]||''):el.content;d.dataset.b=el.y+dy+el.height;return d;}
-        function pS(ctr){state.data.forEach(r=>{const p=cP();let mb=0;state.elements.forEach(e=>{const el=cE(e,r);p.appendChild(el);mb=Math.max(mb,+el.dataset.b);});if(state.config.pageSize==='receipt80')p.style.height=(mb+20)+'px';ctr.appendChild(p);});}
+    
+        function cP(){
+            const d=document.createElement('div');
+            d.className='print-page';
+            d.style.width=state.config.widthMm+'mm';
+            d.style.height=state.config.pageSize==='receipt80'?'auto':state.config.heightMm+'mm';
+            return d;
+        }
+    
+        function cE(el,r,dx=0,dy=0){
+            const d=document.createElement('div'); d.className='print-element';
+            const finalX = el.x+dx;
+            const finalY = el.y+dy;
+            d.style.left=finalX+'px'; d.style.top=finalY+'px';
+            d.style.width=el.width+'px'; d.style.height=el.height+'px';
+            d.style.fontSize=el.fontSize+'px'; d.style.fontWeight=el.fontWeight;
+            d.style.background=el.backgroundColor; d.style.border=el.border;
+            d.innerText=el.type==='field'&&r?(r[el.fieldName]||''):el.content;
+            d.dataset.b = finalY + el.height;
+            return d;
+        }
+    
+        function pS(ctr){
+            state.data.forEach(r=>{
+                const p=cP();
+                let mb=0;
+                state.elements.forEach(e=>{
+                    const el=cE(e,r); p.appendChild(el);
+                    mb=Math.max(mb, +el.dataset.b);
+                });
+                if(state.config.pageSize==='receipt80') p.style.height=(mb+20)+'px';
+                ctr.appendChild(p);
+            });
+        }
+    
         function pG(ctr){
-            const grp={};const kf=state.config.groupField;state.data.forEach(r=>{const k=kf?r[kf]:'A';if(!grp[k])grp[k]=[];grp[k].push(r);});
-            const hE=state.elements.filter(e=>e.y<state.config.splitY),dE=state.elements.filter(e=>e.y>=state.config.splitY); dE.forEach(e=>e._oy=e.y-state.config.splitY);
+            const grp={}; const kf=state.config.groupField;
+            state.data.forEach(r=>{const k=kf?r[kf]:'A';if(!grp[k])grp[k]=[];grp[k].push(r);});
+            
+            const hE=state.elements.filter(e=>e.y<state.config.splitY);
+            const dE=state.elements.filter(e=>e.y>=state.config.splitY);
+            dE.forEach(e=>e._oy=e.y-state.config.splitY);
+            
             const pH=state.config.pageSize==='receipt80'?99999:1050;
-            Object.values(grp).forEach(rs=>{let p=cP();ctr.appendChild(p);let cm=0;const rh=()=>hE.forEach(e=>{const el=cE(e,rs[0]);p.appendChild(el);cm=Math.max(cm,+el.dataset.b);});rh();let y=state.config.splitY;rs.forEach(r=>{if(y+state.config.rowHeight>pH){p=cP();ctr.appendChild(p);rh();y=state.config.splitY;cm=y;}dE.forEach(e=>{const el=cE(e,r,0,y+e._oy-e.y);el.style.top=(y+e.y-state.config.splitY)+'px';p.appendChild(el);cm=Math.max(cm,+el.dataset.b);});y+=state.config.rowHeight;});if(state.config.pageSize==='receipt80')p.style.height=(cm+50)+'px';});
+            
+            Object.values(grp).forEach(rs=>{
+                let p=cP(); ctr.appendChild(p);
+                let cm=0;
+                const rh=()=>hE.forEach(e=>{
+                    const el=cE(e,rs[0]); p.appendChild(el);
+                    cm=Math.max(cm, +el.dataset.b);
+                });
+                rh();
+                let y=state.config.splitY;
+                rs.forEach(r=>{
+                    if(y+state.config.rowHeight>pH){
+                        p=cP(); ctr.appendChild(p); rh(); y=state.config.splitY; cm=y;
+                    }
+                    dE.forEach(e=>{
+                        // 手動計算絕對座標以避免高度塌陷
+                        const absY = y + (e.y - state.config.splitY);
+                        const el=cE(e,r,0,0); // dx,dy 設0，手動指定 top
+                        el.style.top = absY + 'px';
+                        p.appendChild(el);
+                        cm=Math.max(cm, absY + e.height);
+                    });
+                    y+=state.config.rowHeight;
+                });
+                if(state.config.pageSize==='receipt80') p.style.height=(cm+50)+'px';
+            });
         }
+    
         function pGd(ctr){
-            const {gridCols:gc,gridRows:gr,gridGapX:gx,gridGapY:gy}=state.config;
-            let mx=0,my=0;state.elements.forEach(e=>{mx=Math.max(mx,e.x+e.width);my=Math.max(my,e.y+e.height);});
-            const cw=mx+gx,ch=my+gy, MM=3.78, pW=state.config.widthMm*MM, pH=state.config.heightMm*MM, tw=(cw*gc)-gx, th=(ch*gr)-gy;
-            const sx=Math.max(20,(pW-tw)/2), sy=Math.max(20,(pH-th)/2);
-            let p=cP();ctr.appendChild(p);let i=0;
-            state.data.forEach(r=>{if(i>=gc*gr){p=cP();ctr.appendChild(p);i=0;} const c=i%gc,rw=Math.floor(i/gc); state.elements.forEach(el=>p.appendChild(cE(el,r,sx+c*cw,sy+rw*ch))); i++;});
+            const {gridCols:gc, gridRows:gr, gridGapX:gx, gridGapY:gy}=state.config;
+            let mx=0, my=0;
+            state.elements.forEach(e=>{mx=Math.max(mx,e.x+e.width); my=Math.max(my,e.y+e.height);});
+            
+            const cellW=mx+gx, cellH=my+gy;
+            // 修正：自動置中計算
+            const MM_TO_PX = 3.78;
+            const pagePixelW = state.config.widthMm * MM_TO_PX;
+            const pagePixelH = state.config.heightMm * MM_TO_PX;
+            const totalContentW = (cellW * gc) - gx;
+            const totalContentH = (cellH * gr) - gy;
+            
+            const startX = Math.max(20, (pagePixelW - totalContentW) / 2);
+            const startY = Math.max(20, (pagePixelH - totalContentH) / 2);
+    
+            let p=cP(); ctr.appendChild(p); let i=0;
+            state.data.forEach(r=>{
+                if(i>=gc*gr){p=cP();ctr.appendChild(p);i=0;}
+                const c=i%gc, rw=Math.floor(i/gc);
+                const offsetX = startX + (c * cellW);
+                const offsetY = startY + (rw * cellH);
+                
+                state.elements.forEach(el=>p.appendChild(cE(el,r,offsetX,offsetY)));
+                i++;
+            });
         }
     </script>
 </body>
