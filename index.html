@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>報表設計器 - Report Designer Studio</title>
+    <title>進階報表設計器 - Master-Detail Support</title>
     <style>
         :root {
             --primary: #2186c4;
@@ -16,1008 +16,577 @@
             --danger: #f44336;
             --warning: #ff9800;
         }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
             background: var(--bg);
             color: var(--text);
         }
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
-            padding: 20px;
-        }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
         .header {
-            background: var(--surface);
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: var(--surface); padding: 20px; border-radius: 8px; margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;
         }
-        .header h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
-        }
-        .header p {
-            color: #666;
-            font-size: 14px;
-        }
-        .main-layout {
-            display: grid;
-            grid-template-columns: 250px 1fr 300px;
-            gap: 20px;
-        }
-        .panel {
-            background: var(--surface);
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .panel-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid var(--primary);
-        }
-        /* 左側面板 - 數據上傳 */
-        .left-panel {
-            display: flex;
-            flex-direction: column;
-        }
+        .main-layout { display: grid; grid-template-columns: 250px 1fr 300px; gap: 20px; }
+        .panel { background: var(--surface); border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .panel-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--primary); }
+        
+        /* Upload & Fields */
         .upload-area {
-            border: 2px dashed var(--border);
-            border-radius: 6px;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 15px;
+            border: 2px dashed var(--border); border-radius: 6px; padding: 20px; text-align: center;
+            cursor: pointer; margin-bottom: 15px; transition: all 0.3s;
         }
-        .upload-area:hover {
-            border-color: var(--primary);
-            background: rgba(33, 150, 243, 0.05);
-        }
-        .upload-area.dragover {
-            border-color: var(--primary);
-            background: rgba(33, 150, 243, 0.1);
-        }
-        .upload-area input {
-            display: none;
-        }
-        .upload-icon {
-            font-size: 32px;
-            margin-bottom: 10px;
-        }
-        .field-list {
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 10px;
-        }
+        .upload-area:hover { border-color: var(--primary); background: rgba(33, 150, 243, 0.05); }
+        .field-list { max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
         .field-item {
-            padding: 8px 12px;
-            margin-bottom: 6px;
-            background: var(--bg);
-            border-radius: 4px;
-            cursor: move;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-            user-select: none;
+            padding: 8px 12px; margin-bottom: 6px; background: var(--bg); border-radius: 4px;
+            cursor: move; font-size: 13px; display: flex; align-items: center; gap: 8px; user-select: none;
         }
-        .field-item:hover {
-            background: var(--primary);
-            color: white;
-        }
-        .field-item.dragging {
-            opacity: 0.5;
-        }
-        .field-icon {
-            font-size: 14px;
-        }
-        /* 中央面板 - 畫布 */
-        .canvas-panel {
-            grid-column: 2;
-        }
+        .field-item:hover { background: var(--primary); color: white; }
+
+        /* Canvas */
         .canvas-wrapper {
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: white;
-            overflow: auto;
-            height: 600px;
-            position: relative;
+            border: 1px solid var(--border); border-radius: 8px; background: #525659;
+            overflow: auto; height: 700px; position: relative; display: flex; justify-content: center; padding: 20px;
         }
         .canvas {
-            width: 210mm;
-            height: 297mm;
-            margin: 20px auto;
-            background: white;
-            border: 1px solid #ddd;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            position: relative;
-            padding: 0;
-            overflow: hidden;
-        }
-        .canvas-label {
-            position: absolute;
-            top: 5px;
-            right: 10px;
-            font-size: 12px;
-            color: #999;
+            width: 210mm; height: 297mm; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            position: relative; overflow: hidden; flex-shrink: 0;
         }
         .canvas-element {
-            position: absolute;
-            cursor: move;
-            padding: 10px;
-            background: rgba(33, 150, 243, 0.1);
-            border: 2px solid var(--primary);
-            border-radius: 4px;
-            min-width: 60px;
-            min-height: 20px;
-            transition: all 0.2s;
-            resize: both;
-            overflow: hidden;
-            user-select: none;
-            display: flex;
-            align-items: center;
+            position: absolute; cursor: move; padding: 5px;
+            background: rgba(33, 150, 243, 0.1); border: 1px solid var(--primary); border-radius: 2px;
+            min-width: 50px; min-height: 20px; display: flex; align-items: center; white-space: nowrap; overflow: hidden;
         }
-        .canvas-element:hover {
-            box-shadow: 0 0 8px rgba(33, 150, 243, 0.3);
-        }
-        .canvas-element.selected {
-            border-color: var(--danger);
-            box-shadow: 0 0 12px rgba(244, 67, 54, 0.4);
-        }
-        .canvas-element-value {
-            font-size: inherit;
-            color: inherit;
-            font-weight: inherit;
-            width: 100%;
-            pointer-events: none;
-        }
+        .canvas-element.selected { border: 2px solid var(--danger); z-index: 100; }
+        .canvas-element-value { pointer-events: none; width: 100%; }
         .resize-handle {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 12px;
-            height: 12px;
-            background: var(--primary);
-            cursor: nwse-resize;
-            border-radius: 2px;
-        }
-        /* 右側面板 - 屬性設定 */
-        .right-panel {
-            max-height: 600px;
-            overflow-y: auto;
-        }
-        .property-group {
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--border);
-        }
-        .property-group:last-child {
-            border-bottom: none;
-        }
-        .property-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: #666;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-            display: block;
-        }
-        .property-input, .property-select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            font-size: 13px;
-            font-family: inherit;
-            margin-bottom: 8px;
-        }
-        .property-input:focus, .property-select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 4px rgba(33, 150, 243, 0.2);
-        }
-        .color-picker {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-        .color-input {
-            width: 50px;
-            height: 36px;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        /* 按鈕 */
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-        .btn-primary:hover {
-            background: var(--primary-hover);
-        }
-        .btn-secondary {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--text);
-        }
-        .btn-secondary:hover {
-            background: #f0f0f0;
-        }
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-        }
-        .btn-danger:hover {
-            background: #d32f2f;
-        }
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-        .btn-success:hover {
-            background: #388e3c;
-        }
-        .btn-group {
-            display: flex;
-            gap: 8px;
-            margin-top: 15px;
-        }
-        .btn-block {
-            width: 100%;
-        }
-        /* 底部按鈕欄 */
-        .footer {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        /* 預覽模式 */
-        .preview-mode .canvas-element {
-            cursor: auto;
-            resize: none;
-            background: transparent;
-            border: 1px solid #e0e0e0;
-        }
-        .preview-mode .canvas-element:hover {
-            box-shadow: none;
-        }
-        /* 信息提示 */
-        .message {
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            font-size: 13px;
-        }
-        .message.info {
-            background: rgba(33, 150, 243, 0.1);
-            color: #1565c0;
-            border-left: 3px solid #1565c0;
-        }
-        .message.success {
-            background: rgba(76, 175, 80, 0.1);
-            color: #2e7d32;
-            border-left: 3px solid #2e7d32;
-        }
-        .message.error {
-            background: rgba(244, 67, 54, 0.1);
-            color: #c62828;
-            border-left: 3px solid #c62828;
-        }
-        /* 響應式設計 */
-        @media (max-width: 1400px) {
-            .main-layout {
-                grid-template-columns: 1fr;
-            }
-            .canvas-panel, .right-panel, .left-panel {
-                grid-column: 1;
-            }
+            position: absolute; bottom: 0; right: 0; width: 10px; height: 10px;
+            background: var(--primary); cursor: nwse-resize;
         }
 
-        /* ========== 列印專用樣式 (修正後) ========== */
+        /* Split Line for Master-Detail */
+        #splitLine {
+            position: absolute; left: 0; width: 100%; height: 0;
+            border-top: 2px dashed #f44336; z-index: 90; cursor: ns-resize;
+        }
+        #splitLine::after {
+            content: '頁首與列表分隔線 (拖曳調整)'; position: absolute; right: 10px; top: -20px;
+            font-size: 12px; color: #f44336; font-weight: bold; background: rgba(255,255,255,0.8);
+        }
+
+        /* Property Panel */
+        .property-group { margin-bottom: 15px; }
+        .property-label { font-size: 12px; font-weight: 600; color: #666; margin-bottom: 5px; display: block; }
+        .property-input, .property-select { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; }
+        
+        /* Buttons */
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; color: white; }
+        .btn-primary { background: var(--primary); }
+        .btn-secondary { background: #e0e0e0; color: #333; }
+        .btn-success { background: var(--success); }
+        .btn-danger { background: var(--danger); }
+        
+        .message { padding: 10px; margin-bottom: 10px; border-radius: 4px; font-size: 13px; }
+        .message.info { background: #e3f2fd; color: #1565c0; }
+        
+        /* Print Styles */
         @media print {
-            body {
-                visibility: hidden;
-                background: white;
+            body * { visibility: hidden; }
+            #print-container, #print-container * { visibility: visible; }
+            #print-container { position: absolute; left: 0; top: 0; width: 100%; }
+            .print-page {
+                position: relative; width: 210mm; height: 297mm;
+                margin: 0 auto; background: white; overflow: hidden;
+                page-break-after: always; break-after: page;
             }
-            .canvas, .canvas * {
-                visibility: visible;
-            }
-            .canvas {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                margin: 0;
-                padding: 0;
-                border: none;
-                box-shadow: none;
-                background: white;
-                z-index: 9999;
-            }
-            .canvas-element {
-                background: transparent !important;
-                border: none !important;
-                box-shadow: none !important;
-                resize: none;
-            }
-            .canvas-label, .resize-handle {
-                display: none !important;
-            }
+            .print-element { position: absolute; display: flex; align-items: center; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📊 報表設計器 - Report Designer Studio</h1>
-            <p>上傳 CSV/JSON 數據，拖拽欄位到畫布，設定屬性，即時預覽和列印</p>
+            <h1>📊 進階報表設計器 (分組/套表功能)</h1>
+            <div>
+                <button class="btn btn-secondary" id="previewBtn">👁️ 預覽</button>
+                <button class="btn btn-success" id="printBtn">🖨️ 列印報表</button>
+            </div>
         </div>
 
         <div class="main-layout">
+            <!-- Left Panel -->
             <div class="panel left-panel">
-                <div class="panel-title">📁 數據源</div>
-                
+                <div class="panel-title">📁 1. 上傳數據</div>
                 <div class="upload-area" id="uploadArea">
-                    <div class="upload-icon">📤</div>
-                    <p style="font-weight: 500; margin-bottom: 5px;">點擊或拖放</p>
-                    <p style="font-size: 12px; color: #999;">CSV 或 JSON 檔案</p>
-                    <input type="file" id="fileInput" accept=".csv,.json">
+                    <p>點擊上傳 CSV/JSON</p>
+                    <input type="file" id="fileInput" accept=".csv,.json" style="display:none">
                 </div>
-
-                <div id="message" style="margin-bottom: 10px;"></div>
-
-                <div class="panel-title" style="margin-top: 20px;">🏷️ 可用欄位</div>
-                <div class="field-list" id="fieldList">
-                    <div style="color: #999; text-align: center; padding: 20px; font-size: 13px;">
-                        上傳檔案以查看欄位
-                    </div>
-                </div>
+                <div id="message"></div>
+                <div class="panel-title">🏷️ 2. 拖曳欄位</div>
+                <div class="field-list" id="fieldList"></div>
             </div>
 
+            <!-- Center Panel -->
             <div class="panel canvas-panel">
-                <div class="panel-title">🎨 設計畫布</div>
-                
-                <div id="dataControls" style="display: none; margin-bottom: 10px; padding: 10px; background: #e3f2fd; border-radius: 4px; align-items: center; gap: 10px;">
-                    <span style="font-weight: bold; color: #1565c0; font-size: 13px;">📊 資料預覽：</span>
-                    <button class="btn btn-secondary" id="prevDataBtn" style="padding: 4px 8px; font-size: 12px;">◀ 上一筆</button>
-                    <span id="dataIndicator" style="font-size: 13px; min-width: 80px; text-align: center;">第 0 / 0 筆</span>
-                    <button class="btn btn-secondary" id="nextDataBtn" style="padding: 4px 8px; font-size: 12px;">下一筆 ▶</button>
+                <div class="panel-title">🎨 3. 設計畫布</div>
+                <div style="margin-bottom: 10px;">
+                    <button class="btn btn-secondary" id="addTextBtn">➕ 固定的文字</button>
+                    <button class="btn btn-secondary" id="addTitleBtn">📌 報表標題</button>
+                    <span style="font-size: 12px; color: #666; margin-left: 10px;">💡 提示：紅色虛線以上是每頁重複的標題，以下是列表</span>
                 </div>
-
-                <div style="margin-bottom: 15px; display: flex; gap: 8px;">
-                    <button class="btn btn-secondary" id="addTextBtn">➕ 文字</button>
-                    <button class="btn btn-secondary" id="addFieldBtn">🔗 欄位</button>
-                    <button class="btn btn-secondary" id="addTitleBtn">📌 標題</button>
-                    <button class="btn btn-secondary" id="previewBtn">👁️ 預覽</button>
-                    <button class="btn btn-success" id="printBtn">🖨️ 列印</button>
-                </div>
-
                 <div class="canvas-wrapper">
                     <div class="canvas" id="canvas">
-                        <div class="canvas-label">A4 (210×297mm)</div>
+                        <div id="splitLine" style="top: 150px;"></div> <!-- Default split position -->
+                        <div class="canvas-label" style="position: absolute; top:5px; right:5px; color:#ccc;">A4</div>
                     </div>
                 </div>
             </div>
 
+            <!-- Right Panel -->
             <div class="panel right-panel">
-                <div class="panel-title">⚙️ 屬性設定</div>
-                <div id="propertyPanel" style="text-align: center; color: #999; padding: 30px 0;">
-                    選擇畫布中的元素進行編輯
+                <div class="panel-title">⚙️ 4. 報表設定</div>
+                
+                <div class="property-group" style="background: #e8f5e9; padding: 10px; border-radius: 4px;">
+                    <label class="property-label">📄 列印模式</label>
+                    <select class="property-select" id="reportMode">
+                        <option value="single">單筆分頁 (Mail Merge)</option>
+                        <option value="group">分組列表 (Master-Detail)</option>
+                    </select>
+                </div>
+
+                <div id="groupSettings" style="display: none; border: 1px solid #4caf50; padding: 10px; border-radius: 4px; margin-bottom: 20px;">
+                    <div class="property-group">
+                        <label class="property-label">🔑 分組欄位 (如: 員工姓名)</label>
+                        <select class="property-select" id="groupFieldSelect">
+                            <option value="">-- 請選擇 --</option>
+                        </select>
+                    </div>
+                    <div class="property-group">
+                        <label class="property-label">📏 列表起始 Y 座標 (px)</label>
+                        <input type="number" class="property-input" id="splitYInput" value="150">
+                    </div>
+                    <div class="property-group">
+                        <label class="property-label">↕️ 資料行高 (px)</label>
+                        <input type="number" class="property-input" id="rowHeightInput" value="40">
+                    </div>
+                    <p style="font-size:12px; color:#666;">* 紅線以下的元素將作為「列表欄位」重複列印</p>
+                </div>
+
+                <div class="panel-title">元件屬性</div>
+                <div id="propertyPanel">
+                    <div style="text-align: center; color: #999; padding: 20px 0;">點擊元素編輯</div>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-primary" style="width:100%" id="saveBtn">💾 保存設定</button>
+                    <button class="btn btn-danger" style="width:100%; margin-top:10px" id="clearBtn">🗑️ 清空畫布</button>
                 </div>
             </div>
-        </div>
-
-        <div class="footer">
-            <button class="btn btn-primary" id="saveBtn">💾 保存報表配置</button>
-            <button class="btn btn-secondary" id="loadBtn">📂 載入配置</button>
-            <button class="btn btn-danger" id="clearBtn">🗑️ 清除全部</button>
         </div>
     </div>
 
+    <!-- Hidden Print Container -->
+    <div id="print-container"></div>
+
     <script>
-        // ============ 全局狀態 ============
+        // State
         const state = {
             fields: [],
             elements: [],
+            data: [],
             selectedElement: null,
             previewMode: false,
-            data: null,
-            currentDataIndex: 0
+            config: {
+                mode: 'single', // 'single' or 'group'
+                groupField: '',
+                splitY: 150,
+                rowHeight: 40
+            }
         };
 
-        // ============ DOM 元素 ============
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const fieldList = document.getElementById('fieldList');
+        // DOM
         const canvas = document.getElementById('canvas');
-        const propertyPanel = document.getElementById('propertyPanel');
-        const messageDiv = document.getElementById('message');
-        
-        // 資料控制元素
-        const dataControls = document.getElementById('dataControls');
-        const prevDataBtn = document.getElementById('prevDataBtn');
-        const nextDataBtn = document.getElementById('nextDataBtn');
-        const dataIndicator = document.getElementById('dataIndicator');
+        const splitLine = document.getElementById('splitLine');
+        const splitYInput = document.getElementById('splitYInput');
+        const reportMode = document.getElementById('reportMode');
+        const groupSettings = document.getElementById('groupSettings');
+        const groupFieldSelect = document.getElementById('groupFieldSelect');
 
-        // ============ 文件上傳 ============
-        uploadArea.addEventListener('click', () => fileInput.click());
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            handleFileUpload(e.dataTransfer.files[0]);
-        });
-        fileInput.addEventListener('change', (e) => {
-            handleFileUpload(e.target.files[0]);
-        });
+        // Init
+        setupDragAndDrop();
+        setupSplitLine();
 
-        function handleFileUpload(file) {
-            if (!file) return;
+        // 1. Upload Logic
+        document.getElementById('uploadArea').onclick = () => document.getElementById('fileInput').click();
+        document.getElementById('fileInput').onchange = (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
-                try {
-                    let data = null;
-                    const content = e.target.result;
-                    if (file.name.endsWith('.json')) {
-                        data = JSON.parse(content);
-                    } else if (file.name.endsWith('.csv')) {
-                        data = parseCSV(content);
-                    } else {
-                        throw new Error('不支持的檔案格式');
-                    }
-                    state.data = data;
-                    state.currentDataIndex = 0;
-                    extractFields(data);
-                    
-                    // 顯示資料控制列
-                    if (state.data && state.data.length > 0) {
-                        dataControls.style.display = 'flex';
-                        updateDataIndicator();
-                    }
-                    
-                    showMessage(`✅ 成功上傳！共 ${state.data.length} 筆數據`, 'success');
-                } catch (error) {
-                    showMessage(`❌ 錯誤: ${error.message}`, 'error');
-                }
+                if(file.name.endsWith('.json')) state.data = JSON.parse(e.target.result);
+                else state.data = parseCSV(e.target.result);
+                
+                extractFields();
+                showMessage(`✅ 載入 ${state.data.length} 筆資料`);
             };
             reader.readAsText(file);
-        }
+        };
 
         function parseCSV(csv) {
             const lines = csv.trim().split('\n');
             const headers = lines[0].split(',').map(h => h.trim());
-            const data = [];
+            return lines.slice(1).map(line => {
+                const values = line.split(',');
+                return headers.reduce((obj, h, i) => ({...obj, [h]: values[i]?.trim() || ''}), {});
+            });
+        }
+
+        function extractFields() {
+            if(!state.data.length) return;
+            state.fields = Object.keys(state.data[0]);
             
-            for (let i = 1; i < lines.length; i++) {
-                const row = {};
-                const values = lines[i].split(',');
-                headers.forEach((header, index) => {
-                    row[header] = values[index] ? values[index].trim() : '';
-                });
-                data.push(row);
-            }
-            return data;
+            // Render Field List
+            const list = document.getElementById('fieldList');
+            list.innerHTML = state.fields.map(f => `
+                <div class="field-item" draggable="true" data-field="${f}">
+                    <span>📊 ${f}</span>
+                </div>
+            `).join('');
+            
+            // Render Group Select
+            groupFieldSelect.innerHTML = `<option value="">-- 請選擇 --</option>` + 
+                state.fields.map(f => `<option value="${f}">${f}</option>`).join('');
+            
+            addDragListeners();
         }
 
-        function extractFields(data) {
-            state.fields = [];
-            if (Array.isArray(data) && data.length > 0) {
-                state.fields = Object.keys(data[0]);
-            } else if (typeof data === 'object') {
-                state.fields = Object.keys(data);
+        // 2. Settings Logic
+        reportMode.addEventListener('change', (e) => {
+            state.config.mode = e.target.value;
+            if(state.config.mode === 'group') {
+                groupSettings.style.display = 'block';
+                splitLine.style.display = 'block';
+            } else {
+                groupSettings.style.display = 'none';
+                splitLine.style.display = 'none';
             }
-            renderFieldList();
+        });
+
+        splitYInput.addEventListener('change', (e) => {
+            const y = parseInt(e.target.value);
+            state.config.splitY = y;
+            splitLine.style.top = y + 'px';
+        });
+
+        document.getElementById('rowHeightInput').addEventListener('change', (e) => {
+            state.config.rowHeight = parseInt(e.target.value);
+        });
+        
+        document.getElementById('groupFieldSelect').addEventListener('change', (e) => {
+            state.config.groupField = e.target.value;
+        });
+
+        function setupSplitLine() {
+            let isDragging = false;
+            splitLine.addEventListener('mousedown', () => isDragging = true);
+            document.addEventListener('mousemove', (e) => {
+                if(!isDragging) return;
+                const rect = canvas.getBoundingClientRect();
+                let y = e.clientY - rect.top;
+                y = Math.max(0, Math.min(y, 1100)); // Limit
+                splitLine.style.top = y + 'px';
+                splitYInput.value = Math.round(y);
+                state.config.splitY = y;
+            });
+            document.addEventListener('mouseup', () => isDragging = false);
         }
 
-        function renderFieldList() {
-            fieldList.innerHTML = state.fields.length === 0 
-                ? '<div style="color: #999; text-align: center; padding: 20px; font-size: 13px;">沒有可用欄位</div>'
-                : state.fields.map(field => `
-                    <div class="field-item" draggable="true" data-field="${field}">
-                        <span class="field-icon">📊</span>
-                        <span>${field}</span>
-                    </div>
-                `).join('');
-
+        // 3. Canvas Logic
+        function addDragListeners() {
             document.querySelectorAll('.field-item').forEach(item => {
                 item.addEventListener('dragstart', (e) => {
-                    e.dataTransfer.effectAllowed = 'copy';
-                    e.dataTransfer.setData('text/plain', item.dataset.field);
-                    item.classList.add('dragging');
-                });
-                item.addEventListener('dragend', () => {
-                    item.classList.remove('dragging');
+                    e.dataTransfer.setData('type', 'field');
+                    e.dataTransfer.setData('content', item.dataset.field);
                 });
             });
         }
 
-        // ============ 資料切換邏輯 ============
-        function updateDataIndicator() {
-            if (!state.data || state.data.length === 0) return;
-            dataIndicator.textContent = `第 ${state.currentDataIndex + 1} / ${state.data.length} 筆`;
-            if (state.previewMode) {
-                applyDataToCanvas();
-            }
+        function setupDragAndDrop() {
+            canvas.addEventListener('dragover', e => e.preventDefault());
+            canvas.addEventListener('drop', e => {
+                e.preventDefault();
+                const type = e.dataTransfer.getData('type');
+                const content = e.dataTransfer.getData('content');
+                const rect = canvas.getBoundingClientRect();
+                addElement(type, content, e.clientX - rect.left, e.clientY - rect.top);
+            });
         }
 
-        prevDataBtn.addEventListener('click', () => {
-            if (state.data && state.currentDataIndex > 0) {
-                state.currentDataIndex--;
-                updateDataIndicator();
-            }
-        });
+        document.getElementById('addTextBtn').onclick = () => addElement('text', '文字內容', 50, 50);
+        document.getElementById('addTitleBtn').onclick = () => addElement('title', '報表標題', 50, 20);
 
-        nextDataBtn.addEventListener('click', () => {
-            if (state.data && state.currentDataIndex < state.data.length - 1) {
-                state.currentDataIndex++;
-                updateDataIndicator();
-            }
-        });
-
-        // ============ 畫布操作與資料合併 ============
-        let elementCounter = 0;
-
-        function createCanvasElement(type, fieldName = null) {
-            const id = `elem-${elementCounter++}`;
-            const element = {
-                id,
-                type,
-                fieldName,
-                x: 20,
-                y: 20 + state.elements.length * 30,
-                width: 150,
-                height: 30,
-                fontSize: 14,
-                fontWeight: 'normal',
-                color: '#333333',
-                backgroundColor: 'transparent',
-                border: '1px solid #2186c4',
-                content: type === 'text' ? '文字內容' : (type === 'title' ? '報表標題' : `[${fieldName || '欄位'}]`)
+        function addElement(type, content, x, y) {
+            const el = {
+                id: 'el-' + Date.now(),
+                type, content, x, y, 
+                width: 150, height: 30, 
+                fontSize: 14, fontWeight: 'normal',
+                fieldName: type === 'field' ? content : null
             };
-            
-            state.elements.push(element);
-            renderElement(element);
-            return element;
+            state.elements.push(el);
+            renderElement(el);
         }
 
-        function renderElement(element) {
-            const existing = document.getElementById(element.id);
-            if (existing) existing.remove();
-
+        function renderElement(el) {
             const div = document.createElement('div');
-            div.id = element.id;
+            div.id = el.id;
             div.className = 'canvas-element';
-            div.style.left = element.x + 'px';
-            div.style.top = element.y + 'px';
-            div.style.width = element.width + 'px';
-            div.style.height = element.height + 'px';
-            div.style.fontSize = element.fontSize + 'px';
-            div.style.fontWeight = element.fontWeight;
-            div.style.color = element.color;
-            div.style.backgroundColor = element.backgroundColor;
-            div.style.border = element.border;
+            div.style.left = el.x + 'px';
+            div.style.top = el.y + 'px';
+            div.style.width = el.width + 'px';
+            div.style.height = el.height + 'px';
+            div.style.fontSize = el.fontSize + 'px';
+            div.style.fontWeight = el.fontWeight;
             
-            // 如果在預覽模式且是欄位，嘗試顯示真實數據
-            let displayText = element.content;
-            if (state.previewMode && element.type === 'field' && state.data && state.data.length > 0) {
-                const currentRow = state.data[state.currentDataIndex];
-                if (currentRow[element.fieldName] !== undefined) {
-                    displayText = currentRow[element.fieldName];
-                }
-            }
-
-            const content = document.createElement('div');
-            content.className = 'canvas-element-value';
-            content.textContent = displayText;
-            div.appendChild(content);
-
-            div.addEventListener('click', (e) => {
+            div.innerHTML = `<div class="canvas-element-value">${type === 'field' ? `[${el.content}]` : el.content}</div><div class="resize-handle"></div>`;
+            
+            // Selection
+            div.onmousedown = (e) => {
+                if(e.target.classList.contains('resize-handle')) return;
                 e.stopPropagation();
-                selectElement(element, div);
-            });
+                selectElement(el, div);
+                
+                // Dragging
+                let startX = e.clientX, startY = e.clientY;
+                let origX = el.x, origY = el.y;
+                
+                const moveHandler = (em) => {
+                    el.x = origX + (em.clientX - startX);
+                    el.y = origY + (em.clientY - startY);
+                    div.style.left = el.x + 'px';
+                    div.style.top = el.y + 'px';
+                };
+                const upHandler = () => {
+                    document.removeEventListener('mousemove', moveHandler);
+                    document.removeEventListener('mouseup', upHandler);
+                };
+                document.addEventListener('mousemove', moveHandler);
+                document.addEventListener('mouseup', upHandler);
+            };
 
-            if (!state.previewMode) {
-                makeDraggable(div, element);
-                makeResizable(div, element);
-            } else {
-                div.classList.add('preview');
-            }
+            // Resizing
+            const handle = div.querySelector('.resize-handle');
+            handle.onmousedown = (e) => {
+                e.stopPropagation();
+                let startX = e.clientX, startY = e.clientY;
+                let origW = el.width, origH = el.height;
+                
+                const resizeMove = (em) => {
+                    el.width = Math.max(20, origW + (em.clientX - startX));
+                    el.height = Math.max(20, origH + (em.clientY - startY));
+                    div.style.width = el.width + 'px';
+                    div.style.height = el.height + 'px';
+                };
+                const resizeUp = () => {
+                    document.removeEventListener('mousemove', resizeMove);
+                    document.removeEventListener('mouseup', resizeUp);
+                };
+                document.addEventListener('mousemove', resizeMove);
+                document.addEventListener('mouseup', resizeUp);
+            };
 
             canvas.appendChild(div);
         }
 
-        function applyDataToCanvas() {
-            if (!state.data || state.data.length === 0) return;
-            const currentRow = state.data[state.currentDataIndex];
-            
-            state.elements.forEach(el => {
-                const domEl = document.getElementById(el.id);
-                const textDiv = domEl.querySelector('.canvas-element-value');
-                
-                if (el.type === 'field' && el.fieldName) {
-                    textDiv.textContent = currentRow[el.fieldName] !== undefined ? currentRow[el.fieldName] : '';
-                } else {
-                    textDiv.textContent = el.content;
-                }
-            });
+        function selectElement(el, div) {
+            document.querySelectorAll('.canvas-element').forEach(d => d.classList.remove('selected'));
+            div.classList.add('selected');
+            state.selectedElement = el;
+            renderProperties(el);
         }
 
-        function revertCanvasToDesign() {
-            state.elements.forEach(el => {
-                const domEl = document.getElementById(el.id);
-                const textDiv = domEl.querySelector('.canvas-element-value');
-                textDiv.textContent = el.content;
-            });
-        }
-
-        function makeDraggable(element, dataElement) {
-            let isDragging = false;
-            let offsetX = 0, offsetY = 0;
-
-            element.addEventListener('mousedown', (e) => {
-                if (state.previewMode) return;
-                if (e.target.classList.contains('resize-handle')) return;
-                isDragging = true;
-                offsetX = e.clientX - element.offsetLeft;
-                offsetY = e.clientY - element.offsetTop;
-            });
-
-            document.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
-                dataElement.x = e.clientX - offsetX;
-                dataElement.y = e.clientY - offsetY;
-                element.style.left = dataElement.x + 'px';
-                element.style.top = dataElement.y + 'px';
-            });
-
-            document.addEventListener('mouseup', () => {
-                isDragging = false;
-            });
-        }
-
-        function makeResizable(element, dataElement) {
-            const handle = document.createElement('div');
-            handle.className = 'resize-handle';
-            element.appendChild(handle);
-
-            let isResizing = false;
-
-            handle.addEventListener('mousedown', (e) => {
-                if (state.previewMode) return;
-                e.stopPropagation();
-                isResizing = true;
-                const startX = e.clientX;
-                const startY = e.clientY;
-                const startWidth = element.offsetWidth;
-                const startHeight = element.offsetHeight;
-
-                const handleMove = (e) => {
-                    if (!isResizing) return;
-                    dataElement.width = Math.max(60, startWidth + (e.clientX - startX));
-                    dataElement.height = Math.max(20, startHeight + (e.clientY - startY));
-                    element.style.width = dataElement.width + 'px';
-                    element.style.height = dataElement.height + 'px';
-                };
-
-                const handleUp = () => {
-                    isResizing = false;
-                    document.removeEventListener('mousemove', handleMove);
-                    document.removeEventListener('mouseup', handleUp);
-                };
-
-                document.addEventListener('mousemove', handleMove);
-                document.addEventListener('mouseup', handleUp);
-            });
-        }
-
-        function selectElement(element, domElement) {
-            if (state.previewMode) return;
-            document.querySelectorAll('.canvas-element.selected').forEach(el => {
-                el.classList.remove('selected');
-            });
-            state.selectedElement = element;
-            domElement.classList.add('selected');
-            renderPropertyPanel(element);
-        }
-
-        canvas.addEventListener('click', () => {
-            document.querySelectorAll('.canvas-element.selected').forEach(el => {
-                el.classList.remove('selected');
-            });
-            state.selectedElement = null;
-            propertyPanel.innerHTML = '<div style="text-align: center; color: #999; padding: 30px 0;">選擇畫布中的元素進行編輯</div>';
-        });
-
-        canvas.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'copy';
-        });
-
-        canvas.addEventListener('drop', (e) => {
-            e.preventDefault();
-            const fieldName = e.dataTransfer.getData('text/plain');
-            
-            if (fieldName && state.fields.includes(fieldName)) {
-                const rect = canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-
-                const element = createCanvasElement('field', fieldName);
-                element.x = x;
-                element.y = y;
-                
-                const domElement = document.getElementById(element.id);
-                domElement.style.left = element.x + 'px';
-                domElement.style.top = element.y + 'px';
-            }
-        });
-
-        // ============ 按鈕事件 ============
-        document.getElementById('addTextBtn').addEventListener('click', () => {
-            createCanvasElement('text');
-        });
-
-        document.getElementById('addFieldBtn').addEventListener('click', () => {
-            if (state.fields.length === 0) {
-                showMessage('❌ 請先上傳數據檔案', 'error');
-                return;
-            }
-            createCanvasElement('field', state.fields[0]);
-        });
-
-        document.getElementById('addTitleBtn').addEventListener('click', () => {
-            createCanvasElement('title');
-        });
-
-        document.getElementById('previewBtn').addEventListener('click', () => {
-            state.previewMode = !state.previewMode;
-            const canvas = document.getElementById('canvas');
-            const btn = document.getElementById('previewBtn');
-
-            canvas.classList.toggle('preview-mode');
-            
-            if (state.previewMode) {
-                btn.textContent = '✏️ 編輯';
-                // 清除選取狀態
-                document.querySelectorAll('.canvas-element.selected').forEach(el => el.classList.remove('selected'));
-                state.selectedElement = null;
-                propertyPanel.innerHTML = '<div style="text-align: center; color: #999; padding: 30px 0;">預覽模式不可編輯</div>';
-
-                if (state.data) {
-                    applyDataToCanvas();
-                    showMessage('👁️ 預覽模式：顯示真實資料', 'info');
-                } else {
-                    showMessage('⚠️ 無數據可預覽，請先上傳檔案', 'warning');
-                }
-            } else {
-                btn.textContent = '👁️ 預覽';
-                revertCanvasToDesign();
-                // 重新渲染以恢復拖曳功能
-                state.elements.forEach(renderElement);
-            }
-        });
-
-        document.getElementById('printBtn').addEventListener('click', () => {
-            // 列印前強制切換到「預覽模式」
-            if (!state.previewMode) {
-                document.getElementById('previewBtn').click(); 
-            }
-            setTimeout(() => {
-                window.print();
-            }, 100);
-        });
-
-        document.getElementById('saveBtn').addEventListener('click', () => {
-            const config = {
-                fields: state.fields,
-                elements: state.elements,
-                timestamp: new Date().toISOString()
-            };
-            const json = JSON.stringify(config, null, 2);
-            const blob = new Blob([json], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `report-config-${Date.now()}.json`;
-            a.click();
-            showMessage('✅ 配置已保存', 'success');
-        });
-
-        document.getElementById('loadBtn').addEventListener('click', () => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            input.onchange = (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        try {
-                            const config = JSON.parse(e.target.result);
-                            state.fields = config.fields;
-                            state.elements = config.elements;
-                            renderFieldList();
-                            state.elements.forEach(renderElement);
-                            showMessage('✅ 配置已載入', 'success');
-                        } catch (error) {
-                            showMessage('❌ 載入失敗: ' + error.message, 'error');
-                        }
-                    };
-                    reader.readAsText(file);
-                }
-            };
-            input.click();
-        });
-
-        document.getElementById('clearBtn').addEventListener('click', () => {
-            if (confirm('確認清除所有元素？')) {
-                state.elements = [];
-                state.selectedElement = null;
-                document.querySelectorAll('.canvas-element').forEach(el => el.remove());
-                propertyPanel.innerHTML = '<div style="text-align: center; color: #999; padding: 30px 0;">選擇畫布中的元素進行編輯</div>';
-                showMessage('✅ 已清除', 'success');
-            }
-        });
-
-        // ============ 屬性面板 (含透明度修復) ============
-        function renderPropertyPanel(element) {
-            const isTransparent = element.backgroundColor === 'transparent' || !element.backgroundColor;
-            const safeBgColor = isTransparent ? '#ffffff' : element.backgroundColor;
-
-            const html = `
+        function renderProperties(el) {
+            const panel = document.getElementById('propertyPanel');
+            panel.innerHTML = `
                 <div class="property-group">
-                    <label class="property-label">元素類型</label>
-                    <input type="text" readonly class="property-input" value="${element.type}">
-                </div>
-                ${element.type === 'field' ? `
-                    <div class="property-group">
-                        <label class="property-label">欄位</label>
-                        <select class="property-select" id="fieldSelect">
-                            ${state.fields.map(f => `<option value="${f}" ${f === element.fieldName ? 'selected' : ''}>${f}</option>`).join('')}
-                        </select>
-                    </div>
-                ` : ''}
-                <div class="property-group">
-                    <label class="property-label">內容</label>
-                    <input type="text" class="property-input" id="contentInput" value="${element.content}">
+                    <label class="property-label">內容 / 欄位</label>
+                    <input class="property-input" value="${el.content}" onchange="updateProp('${el.id}', 'content', this.value)">
                 </div>
                 <div class="property-group">
-                    <label class="property-label">字體大小 (px)</label>
-                    <input type="number" class="property-input" id="fontSizeInput" value="${element.fontSize}" min="8" max="72">
+                    <label class="property-label">字體大小</label>
+                    <input type="number" class="property-input" value="${el.fontSize}" onchange="updateProp('${el.id}', 'fontSize', this.value)">
                 </div>
                 <div class="property-group">
-                    <label class="property-label">字體粗細</label>
-                    <select class="property-select" id="fontWeightSelect">
-                        <option value="normal" ${element.fontWeight === 'normal' ? 'selected' : ''}>普通</option>
-                        <option value="bold" ${element.fontWeight === 'bold' ? 'selected' : ''}>粗體</option>
+                    <label class="property-label">粗細</label>
+                    <select class="property-select" onchange="updateProp('${el.id}', 'fontWeight', this.value)">
+                        <option value="normal" ${el.fontWeight === 'normal'?'selected':''}>正常</option>
+                        <option value="bold" ${el.fontWeight === 'bold'?'selected':''}>粗體</option>
                     </select>
                 </div>
-                <div class="property-group">
-                    <label class="property-label">文字顏色</label>
-                    <div class="color-picker">
-                        <input type="color" class="color-input" id="colorInput" value="${element.color}">
-                        <span style="font-size: 12px; color: #999;">${element.color}</span>
-                    </div>
-                </div>
-                <div class="property-group">
-                    <label class="property-label">背景顏色</label>
-                    <div class="color-picker">
-                        <input type="color" class="color-input" id="bgColorInput" value="${safeBgColor}" ${isTransparent ? 'disabled' : ''}>
-                        <label style="display: flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer;">
-                            <input type="checkbox" id="bgTransparentCheck" ${isTransparent ? 'checked' : ''}>
-                            透明
-                        </label>
-                    </div>
-                </div>
-                <div class="property-group">
-                    <button class="btn btn-danger btn-block" id="deleteBtn">🗑️ 刪除</button>
-                </div>
+                <button class="btn btn-danger" style="width:100%" onclick="deleteElement('${el.id}')">刪除元素</button>
             `;
-            
-            propertyPanel.innerHTML = html;
-
-            if (element.type === 'field') {
-                document.getElementById('fieldSelect').addEventListener('change', (e) => {
-                    element.fieldName = e.target.value;
-                    element.content = `[${e.target.value}]`;
-                    updateElement();
-                });
-            }
-
-            document.getElementById('contentInput').addEventListener('change', (e) => {
-                element.content = e.target.value;
-                updateElement();
-            });
-
-            document.getElementById('fontSizeInput').addEventListener('change', (e) => {
-                element.fontSize = parseInt(e.target.value);
-                updateElement();
-            });
-
-            document.getElementById('fontWeightSelect').addEventListener('change', (e) => {
-                element.fontWeight = e.target.value;
-                updateElement();
-            });
-
-            document.getElementById('colorInput').addEventListener('input', (e) => {
-                element.color = e.target.value;
-                e.target.nextElementSibling.textContent = e.target.value;
-                updateElement();
-            });
-
-            const bgColorInput = document.getElementById('bgColorInput');
-            const bgTransparentCheck = document.getElementById('bgTransparentCheck');
-
-            bgColorInput.addEventListener('input', (e) => {
-                element.backgroundColor = e.target.value;
-                bgTransparentCheck.checked = false;
-                updateElement();
-            });
-
-            bgTransparentCheck.addEventListener('change', (e) => {
-                if (e.target.checked) {
-                    element.backgroundColor = 'transparent';
-                    bgColorInput.disabled = true;
-                } else {
-                    element.backgroundColor = bgColorInput.value;
-                    bgColorInput.disabled = false;
-                }
-                updateElement();
-            });
-
-            document.getElementById('deleteBtn').addEventListener('click', () => {
-                state.elements = state.elements.filter(el => el.id !== element.id);
-                document.getElementById(element.id).remove();
-                state.selectedElement = null;
-                propertyPanel.innerHTML = '<div style="text-align: center; color: #999; padding: 30px 0;">選擇畫布中的元素進行編輯</div>';
-                showMessage('✅ 已刪除', 'success');
-            });
-
-            function updateElement() {
-                renderElement(element);
-                selectElement(element, document.getElementById(element.id));
-            }
         }
 
-        function showMessage(text, type = 'info') {
-            messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
-            setTimeout(() => {
-                messageDiv.innerHTML = '';
-            }, 3000);
+        window.updateProp = (id, prop, val) => {
+            const el = state.elements.find(e => e.id === id);
+            if(el) {
+                el[prop] = val;
+                const div = document.getElementById(id);
+                if(prop === 'content') div.querySelector('.canvas-element-value').innerText = val;
+                if(prop === 'fontSize') div.style.fontSize = val + 'px';
+                if(prop === 'fontWeight') div.style.fontWeight = val;
+            }
+        };
+
+        window.deleteElement = (id) => {
+            state.elements = state.elements.filter(e => e.id !== id);
+            document.getElementById(id).remove();
+            document.getElementById('propertyPanel').innerHTML = '';
+        };
+
+        // 4. PRINT LOGIC (Core Feature)
+        document.getElementById('printBtn').onclick = () => {
+            const container = document.getElementById('print-container');
+            container.innerHTML = '';
+
+            if(!state.data || state.data.length === 0) {
+                alert('請先上傳資料');
+                return;
+            }
+
+            if(state.config.mode === 'single') {
+                printSingleMode(container);
+            } else {
+                if(!state.config.groupField) {
+                    alert('請選擇分組欄位 (例如員工姓名)');
+                    return;
+                }
+                printGroupMode(container);
+            }
+
+            setTimeout(() => window.print(), 500);
+        };
+
+        function createPrintElement(def, content, customY = null) {
+            const div = document.createElement('div');
+            div.className = 'print-element';
+            div.innerText = content;
+            div.style.left = def.x + 'px';
+            div.style.top = (customY !== null ? customY : def.y) + 'px';
+            div.style.width = def.width + 'px';
+            div.style.height = def.height + 'px';
+            div.style.fontSize = def.fontSize + 'px';
+            div.style.fontWeight = def.fontWeight;
+            return div;
+        }
+
+        // Mode A: Mail Merge (One Page Per Record)
+        function printSingleMode(container) {
+            state.data.forEach(row => {
+                const page = document.createElement('div');
+                page.className = 'print-page';
+                
+                state.elements.forEach(el => {
+                    let text = el.content;
+                    if(el.type === 'field' && row[el.fieldName] !== undefined) {
+                        text = row[el.fieldName];
+                    }
+                    page.appendChild(createPrintElement(el, text));
+                });
+                container.appendChild(page);
+            });
+        }
+
+        // Mode B: Master-Detail (Grouped List)
+        function printGroupMode(container) {
+            // 1. Group Data
+            const groups = {};
+            state.data.forEach(row => {
+                const key = row[state.config.groupField] || 'Uncategorized';
+                if(!groups[key]) groups[key] = [];
+                groups[key].push(row);
+            });
+
+            const splitY = state.config.splitY;
+            const rowHeight = state.config.rowHeight;
+            const A4Height = 1122; // approx height in px for A4 at 96dpi (297mm)
+            const marginBottom = 50;
+
+            // Identify Header vs Detail Elements
+            const headerEls = state.elements.filter(e => e.y < splitY);
+            const detailEls = state.elements.filter(e => e.y >= splitY);
+
+            // Shift detail elements relative to splitY (for template calculation)
+            detailEls.forEach(el => el.offsetY = el.y - splitY);
+
+            // 2. Iterate Groups
+            Object.keys(groups).forEach(groupKey => {
+                const rows = groups[groupKey];
+                
+                let currentPage = document.createElement('div');
+                currentPage.className = 'print-page';
+                container.appendChild(currentPage);
+
+                // Helper: Render Header (uses data from the FIRST row of the group)
+                const renderHeader = (pageObj, firstRow) => {
+                    headerEls.forEach(el => {
+                        let text = el.content;
+                        if(el.type === 'field' && firstRow[el.fieldName] !== undefined) {
+                            text = firstRow[el.fieldName];
+                        }
+                        pageObj.appendChild(createPrintElement(el, text));
+                    });
+                };
+
+                // Init first page of this group
+                renderHeader(currentPage, rows[0]);
+                let currentY = splitY;
+
+                // 3. Render Rows
+                rows.forEach(row => {
+                    // Check if page overflow
+                    if(currentY + rowHeight > A4Height - marginBottom) {
+                        // Create New Page
+                        currentPage = document.createElement('div');
+                        currentPage.className = 'print-page';
+                        container.appendChild(currentPage);
+                        
+                        // Repeat Header
+                        renderHeader(currentPage, rows[0]);
+                        currentY = splitY; // Reset Y
+                    }
+
+                    // Render Detail Columns
+                    detailEls.forEach(el => {
+                        let text = el.content;
+                        if(el.type === 'field' && row[el.fieldName] !== undefined) {
+                            text = row[el.fieldName];
+                        }
+                        // Important: Y is calculated dynamically
+                        const dynamicY = currentY + el.offsetY; // maintain relative layout inside row
+                        const elDiv = createPrintElement(el, text, dynamicY);
+                        // Force height to be rowHeight to ensure alignment
+                        // elDiv.style.height = rowHeight + 'px'; 
+                        currentPage.appendChild(elDiv);
+                    });
+
+                    currentY += rowHeight;
+                });
+            });
+        }
+
+        function showMessage(msg) {
+            const m = document.getElementById('message');
+            m.className = 'message info';
+            m.innerText = msg;
+            setTimeout(() => m.innerText = '', 3000);
+        }
+        
+        document.getElementById('clearBtn').onclick = () => {
+            state.elements = [];
+            canvas.innerHTML = '<div id="splitLine" style="top: 150px;"></div><div class="canvas-label" style="position: absolute; top:5px; right:5px; color:#ccc;">A4</div>';
+            setupSplitLine();
         }
     </script>
 </body>
