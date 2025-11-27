@@ -238,15 +238,18 @@
             </div>
             <div class="panel-title">版面整體偏移 (容器)</div>
             <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; border:1px dashed #666;">
-                <div style="font-size:12px; color:#aaa; margin-bottom:8px;">調整整體內容的位置 (如留白邊距)</div>
+                <div style="font-size:12px; color:#aaa; margin-bottom:8px;">
+                    數值越大，內容越往 右/下 移動。<br>
+                    (按上下鍵可快速增減 5px)
+                </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
                     <div class="form-group">
                         <label class="form-label">X 軸 (右移)</label>
-                        <input type="number" id="offX" class="form-control" value="0">
+                        <input type="number" id="offX" class="form-control" value="0" min="0" step="5">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Y 軸 (下移)</label>
-                        <input type="number" id="offY" class="form-control" value="0">
+                        <input type="number" id="offY" class="form-control" value="0" min="0" step="5">
                     </div>
                 </div>
             </div>
@@ -601,22 +604,23 @@
         }
 
         // === Table Props ===
+        // --- 2. 更新表格屬性面板 (加入 min 保護) ---
         function renderTableProps(t) {
             const totalW = t.columnWidths.reduce((a, b) => a + b, 0);
             el('props').innerHTML = `
                 <div class="panel-title">表格設定 (寬:${totalW}px)</div>
-                <div class="form-group"><label>表頭高</label><input type="number" class="form-control" value="${t.headerHeight}" oninput="updTbl('${t.id}','headerHeight',+this.value)"></div>
-                <div class="form-group"><label>列高</label><input type="number" class="form-control" value="${t.rowHeight}" oninput="updTbl('${t.id}','rowHeight',+this.value)"></div>
-                <div class="form-group"><label>字體</label><input type="number" class="form-control" value="${t.fontSize}" oninput="updTbl('${t.id}','fontSize',+this.value)"></div>
+                <div class="form-group"><label>表頭高</label><input type="number" class="form-control" value="${t.headerHeight}" min="1" oninput="updTbl('${t.id}','headerHeight',+this.value)"></div>
+                <div class="form-group"><label>列高</label><input type="number" class="form-control" value="${t.rowHeight}" min="1" oninput="updTbl('${t.id}','rowHeight',+this.value)"></div>
+                <div class="form-group"><label>字體</label><input type="number" class="form-control" value="${t.fontSize}" min="8" oninput="updTbl('${t.id}','fontSize',+this.value)"></div>
                 <div class="form-group"><label>背景</label><input type="color" class="form-control" value="${t.headerBg}" oninput="updTbl('${t.id}','headerBg',this.value)"></div>
                 <div class="form-group"><label>邊框</label><select class="form-control" onchange="updTbl('${t.id}','cellBorder',this.value)"><option value="none">無</option><option value="1px solid #999">細線</option><option value="2px solid #333">粗線</option></select></div>
                 <div class="panel-title">欄位微調</div>
                 ${t.columns.map((c,i)=>`
                     <div class="prop-col-item" style="padding:8px;margin-bottom:5px;border-radius:4px;" 
-                            ondragover="allowDrop(event, this)" ondragleave="leaveDrop(this)" ondrop="dropToProp(event, '${t.id}', ${i}, this)">
+                             ondragover="allowDrop(event, this)" ondragleave="leaveDrop(this)" ondrop="dropToProp(event, '${t.id}', ${i}, this)">
                         <div style="font-weight:bold;margin-bottom:3px;font-size:12px;">${i+1}. ${c}</div>
                         <div style="display:flex;gap:4px;margin-bottom:4px;">
-                            <input type="number" value="${t.columnWidths[i]}" class="form-control" style="width:60px;padding:4px;" oninput="updColW('${t.id}',${i},+this.value)">
+                            <input type="number" value="${t.columnWidths[i]}" class="form-control" style="width:60px;padding:4px;" min="10" oninput="updColW('${t.id}',${i},+this.value)">
                             <select class="form-control" style="padding:4px;" onchange="updColA('${t.id}',${i},this.value)"><option value="left" ${t.columnAligns[i]=='left'?'selected':''}>左</option><option value="center" ${t.columnAligns[i]=='center'?'selected':''}>中</option><option value="right" ${t.columnAligns[i]=='right'?'selected':''}>右</option></select>
                         </div>
                         <div style="font-size:11px;color:var(--primary);border:1px dashed var(--border);padding:4px;background:var(--surface);display:flex;justify-content:space-between;align-items:center;border-radius:4px;">
@@ -745,16 +749,17 @@
         
         function selEl(i) { state.selected=i; document.querySelectorAll('.selected').forEach(x=>x.classList.remove('selected')); el(i.id).classList.add('selected'); renderProps(i); updateFloatBar(); }
         
+        // --- 1. 更新一般元件屬性面板 (加入 min 保護) ---
         function renderProps(i) {
             if (i.type === 'table') return renderTableProps(i);
             el('props').innerHTML = `
                 <div class="panel-title">元件屬性</div>
                 <div class="form-group"><label class="form-label">內容</label><input class="form-control" value="${i.content}" oninput="setProp('${i.id}','content',this.value)"></div>
                 <div style="display:flex; gap:8px;">
-                    <div class="form-group" style="flex:1"><label class="form-label">寬</label><input type="number" class="form-control" value="${i.width}" oninput="setProp('${i.id}','width',+this.value)"></div>
-                    <div class="form-group" style="flex:1"><label class="form-label">高</label><input type="number" class="form-control" value="${i.height}" oninput="setProp('${i.id}','height',+this.value)"></div>
+                    <div class="form-group" style="flex:1"><label class="form-label">寬</label><input type="number" class="form-control" value="${i.width}" min="1" oninput="setProp('${i.id}','width',+this.value)"></div>
+                    <div class="form-group" style="flex:1"><label class="form-label">高</label><input type="number" class="form-control" value="${i.height}" min="1" oninput="setProp('${i.id}','height',+this.value)"></div>
                 </div>
-                <div class="form-group"><label class="form-label">字體大小</label><input type="number" class="form-control" value="${i.fontSize}" oninput="setProp('${i.id}','fontSize',+this.value)"></div>
+                <div class="form-group"><label class="form-label">字體大小</label><input type="number" class="form-control" value="${i.fontSize}" min="8" oninput="setProp('${i.id}','fontSize',+this.value)"></div>
                 <div class="form-group"><label class="form-label">背景色</label><input type="color" class="form-control" style="height:40px" value="${i.backgroundColor==='transparent'?'#ffffff':i.backgroundColor}" oninput="setProp('${i.id}','backgroundColor',this.value)"></div>
                 <div class="form-group"><label class="form-label">邊框</label><select class="form-control" onchange="setProp('${i.id}','border',this.value)"><option value="none">無</option><option value="1px solid #000">實線</option><option value="1px dashed #000">虛線</option></select></div>
                 <button class="btn btn-danger btn-block" onclick="delEl('${i.id}')">刪除元件</button>`;
