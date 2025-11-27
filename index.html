@@ -236,7 +236,20 @@
                     <option value="landscape">橫向</option>
                 </select>
             </div>
-
+            <div class="panel-title">版面整體偏移 (容器)</div>
+            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; border:1px dashed #666;">
+                <div style="font-size:12px; color:#aaa; margin-bottom:8px;">調整整體內容的位置 (如留白邊距)</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+                    <div class="form-group">
+                        <label class="form-label">X 軸 (右移)</label>
+                        <input type="number" id="offX" class="form-control" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Y 軸 (下移)</label>
+                        <input type="number" id="offY" class="form-control" value="0">
+                    </div>
+                </div>
+            </div>
             <div class="panel-title">輸出模式</div>
             <select id="mode" class="form-control" style="margin-bottom:12px">
                 <option value="single">單頁單筆</option>
@@ -286,7 +299,18 @@
     <div id="print-container"></div>
 
     <script>
-        const state = { fields: [], elements: [], data: [], selected: null, config: { size: 'a4', orient: 'portrait', w: 210, h: 297, mode: 'single', grpF: '', splitY: 150, rowH: 30, gC: 2, gR: 4, gX: 10, gY: 10 } };
+        const state = { 
+            fields: [], 
+            elements: [], 
+            data: [], 
+            selected: null, 
+            config: { 
+                size: 'a4', orient: 'portrait', w: 210, h: 297, 
+                mode: 'single', grpF: '', splitY: 150, rowH: 30, 
+                gC: 2, gR: 4, gX: 10, gY: 10,
+                offX: 0, offY: 0  // <--- 新增這兩個
+            } 
+        };
         const el = (id) => document.getElementById(id);
         let currentTableMode = 'smart';
 
@@ -300,7 +324,9 @@
             };
         });
 
-        initCanvas(); 
+        initCanvas();
+            el('offX').onchange = (e) => { state.config.offX = +e.target.value; rerenderAll(); };
+            el('offY').onchange = (e) => { state.config.offY = +e.target.value; rerenderAll(); };
         initDrag();
         // --- 關鍵修復：補上 setPage 函式 ---
         function setPage(size, orient, mode) {
@@ -515,7 +541,7 @@
             const d = document.createElement('div'); d.id = table.id; d.className = 'canvas-element table-element';
             const totalW = table.columnWidths.reduce((a, b) => a + b, 0);
             const totalH = table.headerHeight + table.rowHeight * 2;
-            d.style.cssText = `left:${table.x}px; top:${table.y}px; width:${totalW}px; height:${totalH}px; border:2px solid #2186c4; background:white; cursor:move; position:absolute;`;
+            d.style.cssText = `left:${table.x + state.config.offX}px; top:${table.y + state.config.offY}px; width:${totalW}px; height:${totalH}px; border:2px solid #2186c4; background:white; cursor:move; position:absolute;`;
             
             let html = '<div style="width:100%;height:100%;">';
             // Header
@@ -563,7 +589,13 @@
 
         function dragTable(e, table, d) {
             const sx = e.clientX, sy = e.clientY, stX = table.x, stY = table.y;
-            const mv = (ev) => { table.x = stX + (ev.clientX - sx); table.y = stY + (ev.clientY - sy); d.style.left = table.x + 'px'; d.style.top = table.y + 'px'; };
+            const mv = (ev) => { 
+                table.x = stX + (ev.clientX - sx); 
+                table.y = stY + (ev.clientY - sy); 
+                // 拖曳時也要加上偏移量顯示
+                d.style.left = (table.x + state.config.offX) + 'px'; 
+                d.style.top = (table.y + state.config.offY) + 'px'; 
+            };
             const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); };
             document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
         }
@@ -694,7 +726,22 @@
             const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
             document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
         }
-        function updEl(d, i) { Object.assign(d.style, { left:i.x+'px', top:i.y+'px', width:i.width+'px', height:i.height+'px', fontSize:i.fontSize+'px', fontWeight:i.fontWeight, background:i.backgroundColor, border:i.border }); }
+        function updEl(d, i) { 
+            // 加入 state.config.offX 與 offY
+            const finalX = i.x + state.config.offX;
+            const finalY = i.y + state.config.offY;
+            
+            Object.assign(d.style, { 
+                left: finalX + 'px', 
+                top: finalY + 'px', 
+                width: i.width + 'px', 
+                height: i.height + 'px', 
+                fontSize: i.fontSize + 'px', 
+                fontWeight: i.fontWeight, 
+                background: i.backgroundColor, 
+                border: i.border 
+            }); 
+        }
         
         function selEl(i) { state.selected=i; document.querySelectorAll('.selected').forEach(x=>x.classList.remove('selected')); el(i.id).classList.add('selected'); renderProps(i); updateFloatBar(); }
         
@@ -812,7 +859,11 @@
         function mkPg() { const d = document.createElement('div'); d.className = 'print-page'; d.style.width = state.config.w + 'mm'; d.style.height = state.config.size === 'receipt80' ? 'auto' : state.config.h + 'mm'; return d; }
         function mkEl(item, r, dx = 0, dy = 0) {
             const d = document.createElement('div'); d.className = 'print-element';
-            const fx = item.x + dx, fy = item.y + dy;
+            
+            // 這裡加上全域偏移
+            const fx = item.x + dx + state.config.offX;
+            const fy = item.y + dy + state.config.offY;
+            
             Object.assign(d.style, { left: fx + 'px', top: fy + 'px', width: item.width + 'px', height: item.height + 'px', fontSize: item.fontSize + 'px', fontWeight: item.fontWeight, background: item.backgroundColor, border: item.border });
             d.innerText = item.type === 'field' && r ? (r[item.fieldName] || '') : item.content; d.dataset.b = fy + item.height; return d;
         }
@@ -820,7 +871,11 @@
         // Smart Table Printing
         function mkTblRow(t, rec, y, isH) {
             const r = document.createElement('div'); r.className = 'print-table-row';
-            r.style.cssText = `position:relative; left:${t.x}px; display:flex; width:${t.columnWidths.reduce((a,b)=>a+b,0)}px;`;
+            
+            // 這裡加上全域偏移
+            const finalX = t.x + state.config.offX;
+            
+            r.style.cssText = `position:relative; left:${finalX}px; display:flex; width:${t.columnWidths.reduce((a,b)=>a+b,0)}px;`;
             const merges = t.mergedCells?.filter(m => m.row === (isH ? 0 : 1)) || [];
             const skip = new Set();
             (isH ? t.columns : t.fields).forEach((val, i) => {
