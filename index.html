@@ -792,35 +792,58 @@
         });
     }
 
-    // 模式 C: 網格/標籤
+    // 模式 C: 網格/標籤 (修正版：自動置中與安全邊距)
     function printGrid(ctr) {
         const { gridCols, gridRows, gridGapX, gridGapY } = state.config;
+        
+        // 1. 計算單元格大小 (根據畫布上元素的最大邊界)
         let maxX = 0, maxY = 0;
         state.elements.forEach(e => {
             maxX = Math.max(maxX, e.x + e.width);
             maxY = Math.max(maxY, e.y + e.height);
         });
+        
+        // 單格完整寬度 (含間距)
         const cellW = maxX + gridGapX;
         const cellH = maxY + gridGapY;
+
+        // 2. 計算整張紙的像素大小 (1mm 約等於 3.78px)
+        const MM_TO_PX = 3.78;
+        const pagePixelW = state.config.widthMm * MM_TO_PX;
+        const pagePixelH = state.config.heightMm * MM_TO_PX;
+
+        // 3. 計算總內容寬高
+        const totalContentW = (cellW * gridCols) - gridGapX; // 扣掉最後一個多餘間距
+        const totalContentH = (cellH * gridRows) - gridGapY;
+
+        // 4. 計算置中所需的起始座標 (左邊界與上邊界)
+        // Math.max(20, ...) 確保至少有 20px (約5mm) 的安全邊距，避免印表機夾紙誤差
+        const startX = Math.max(20, (pagePixelW - totalContentW) / 2);
+        const startY = Math.max(20, (pagePixelH - totalContentH) / 2);
 
         let pg = createPage();
         ctr.appendChild(pg);
         let idx = 0;
 
         state.data.forEach(row => {
+            // 換頁判斷
             if (idx >= gridCols * gridRows) {
                 pg = createPage();
                 ctr.appendChild(pg);
                 idx = 0;
             }
+
             const col = idx % gridCols;
             const rowIdx = Math.floor(idx / gridCols);
-            const offsetX = col * cellW;
-            const offsetY = rowIdx * cellH;
+            
+            // 加上 startX 與 startY 進行偏移
+            const offsetX = startX + (col * cellW);
+            const offsetY = startY + (rowIdx * cellH);
 
             state.elements.forEach(el => {
                 pg.appendChild(createEl(el, row, offsetX, offsetY));
             });
+
             idx++;
         });
     }
