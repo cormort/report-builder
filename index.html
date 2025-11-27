@@ -353,28 +353,37 @@
                 grid-column: 1;
             }
         }
-        /* 列印樣式 */
+                /* 列印樣式 */
         @media print {
             body * {
-                display: none;
+                visibility: hidden;
+            }
+            
+            .canvas, .canvas * {
+                visibility: visible;
             }
             
             .canvas {
-                display: block;
+                position: absolute;
+                left: 0;
+                top: 0;
                 margin: 0;
-                padding: 0;
-                width: 100%;
-                height: 100%;
+                padding: 20px;
+                width: 210mm;
+                height: 297mm;
                 border: none;
                 box-shadow: none;
             }
             
             .canvas-element {
-                position: static;
-                margin: 0;
-                padding: 0;
-                background: transparent;
-                border: none;
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+            
+            .canvas-label,
+            .resize-handle {
+                display: none !important;
             }
         }
     </style>
