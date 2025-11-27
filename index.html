@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Report Studio v4.1 - 台灣發票專用版</title>
+    <title>Pro Report Studio v4.2 - 穩定版</title>
     <style>
         :root {
             --primary: #2186c4; --primary-hover: #1a6a9e;
@@ -59,12 +59,28 @@
         .btn-primary { background: var(--primary); } .btn-success { background: var(--success); } .btn-danger { background: var(--danger); }
         .btn-block { width: 100%; display: flex; justify-content: center;}
 
+        /* =========== 修正重點 1: 平時隱藏列印區 =========== */
+        #print-container {
+            display: none; /* 平時不顯示，避免蓋住編輯區 */
+        }
+
         /* Print Logic */
         @media print {
             @page { margin: 0; }
-            body * { visibility: hidden; }
-            #print-container, #print-container * { visibility: visible; }
-            #print-container { position: absolute; left: 0; top: 0; width: 100%; }
+            body * { visibility: hidden; } /* 隱藏原本介面 */
+            
+            /* 列印時才顯示 print-container */
+            #print-container { 
+                display: block !important; 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
+                visibility: visible;
+                z-index: 9999;
+            }
+            #print-container * { visibility: visible; }
+            
             .print-page { position: relative; margin: 0 auto; background: white; page-break-after: always; break-after: page; overflow: hidden; }
             .print-element { position: absolute; display: flex; align-items: center; padding: 2px; }
         }
@@ -72,7 +88,7 @@
 </head>
 <body>
     <div class="header">
-        <div style="font-weight: bold;">📊 Pro Report Studio v4.1 (TW Invoice)</div>
+        <div style="font-weight: bold;">📊 Pro Report Studio v4.2</div>
         <div><button class="btn btn-success" id="printBtn">🖨️ 列印 / 匯出 PDF</button></div>
     </div>
 
@@ -142,7 +158,7 @@
             <!-- Settings: Table Mode -->
             <div id="groupSettings" style="display:none; background:#f0f9eb; padding:8px; border-radius:4px;">
                 <div class="form-group">
-                    <label class="form-label">列表分組欄位 (如: 發票號碼)</label>
+                    <label class="form-label">列表分組欄位</label>
                     <select class="form-control" id="groupFieldSelect"></select>
                 </div>
                 <div class="form-group"><label class="form-label">分隔線 Y (px)</label><input type="number" class="form-control" id="splitYInput" value="150"></div>
@@ -192,7 +208,7 @@
         initCanvas();
         initDrag();
         
-        // --- 1. Canvas & Page Size Logic ---
+        // --- Canvas Logic ---
         function initCanvas() {
             updateCanvasSize();
             els.sizeSelect.onchange = (e) => { state.config.pageSize = e.target.value; updateCanvasSize(); };
@@ -202,138 +218,88 @@
         function updateCanvasSize() {
             const sizeMap = {
                 'a4': [210, 297], 'a5': [148, 210], 'b5': [176, 250],
-                'receipt80': [80, 297] // Height is just visual for receipt
+                'receipt80': [80, 297]
             };
             
             let [w, h] = sizeMap[state.config.pageSize] || [210, 297];
-            
-            // Swap for landscape (except receipt)
             if (state.config.orientation === 'landscape' && state.config.pageSize !== 'receipt80') {
                 [w, h] = [h, w];
             }
-
-            state.config.widthMm = w;
-            state.config.heightMm = h;
-            
-            els.canvas.style.width = w + 'mm';
-            els.canvas.style.height = h + 'mm';
-
-            // Special UI for receipt
+            state.config.widthMm = w; state.config.heightMm = h;
+            els.canvas.style.width = w + 'mm'; els.canvas.style.height = h + 'mm';
             if(state.config.pageSize === 'receipt80') {
-                els.canvas.style.height = 'auto';
-                els.canvas.style.minHeight = '150mm';
-                els.canvas.style.borderBottom = '3px jagged #ccc'; // Visual effect
+                els.canvas.style.height = 'auto'; els.canvas.style.minHeight = '150mm'; els.canvas.style.borderBottom = '3px jagged #ccc';
             }
         }
 
-        // --- 2. Templates (TW Specific) ---
+        // --- Templates ---
         window.tpl = (type) => {
             if(!confirm('這將清除當前畫布，確定嗎？')) return;
             state.elements = [];
             els.canvas.innerHTML = '<div id="splitLine"></div>';
             
-            // 🇹🇼 三聯式發票 (B2B)
             if (type === 'tw_b2b') {
-                setPage('a4', 'portrait', 'group'); // 也可以用 A5 landscape
-                
-                // 表頭
+                setPage('a4', 'portrait', 'group');
                 addElement('title', '電子計算機統一發票', 250, 30, 300, 30, 22, 'bold');
                 addElement('text', '中華民國   年   月   日', 300, 60, 200, 20, 12);
-                
-                // 買受人區塊
                 addElement('text', '買受人：', 40, 90, 60, 25, 12, 'bold');
                 addElement('field', '買受人名稱', 100, 90, 200, 25, 12, 'normal', '#eee', '1px solid #999');
                 addElement('text', '統一編號：', 500, 90, 80, 25, 12, 'bold');
                 addElement('field', '買受人統編', 580, 90, 150, 25, 12, 'normal', '#eee', '1px solid #999');
-                
-                // 發票號碼區
-                addElement('text', '發票號碼：', 500, 30, 80, 25, 12, 'bold', 'transparent', 'none');
+                addElement('text', '發票號碼：', 500, 30, 80, 25, 12, 'bold');
                 addElement('field', '發票號碼', 580, 30, 150, 25, 16, 'bold', '#fff', '2px solid #333');
 
-                // 表格頭部
                 state.config.splitY = 140;
                 const headers = ['品名', '數量', '單價', '金額', '備註'];
                 const widths = [250, 80, 100, 100, 150];
                 let curX = 40;
-                
                 headers.forEach((h, i) => {
                     addElement('text', h, curX, 115, widths[i], 25, 12, 'bold', '#f0f0f0', '1px solid #333');
-                    // 表格內容預覽
                     addElement('field', h, curX, 140, widths[i], 25, 12, 'normal', 'transparent', '1px solid #ccc');
                     curX += widths[i];
                 });
-
-                // 頁尾統計 (模擬)
-                const fY = 700; // 假設頁面底部
-                addElement('text', '銷售額合計 (Sales Amt)', 400, fY, 150, 25, 12, 'bold', 'transparent', '1px solid #ccc');
-                addElement('field', '銷售額', 550, fY, 130, 25, 12, 'normal', 'transparent', '1px solid #ccc');
-                
-                addElement('text', '營業稅 (Tax)', 400, fY+25, 150, 25, 12, 'bold', 'transparent', '1px solid #ccc');
-                addElement('field', '稅額', 550, fY+25, 130, 25, 12, 'normal', 'transparent', '1px solid #ccc');
-                
-                addElement('text', '總計 (Total)', 400, fY+50, 150, 25, 12, 'bold', 'transparent', '1px solid #ccc');
-                addElement('field', '總計金額', 550, fY+50, 130, 25, 12, 'normal', 'transparent', '1px solid #ccc');
-                
                 updateSplitLine();
             }
-            // 🧾 電子發票證明聯 (57mm/80mm)
             else if (type === 'tw_einvoice') {
                 setPage('receipt80', 'portrait', 'group');
-                const cx = 20; // center offset approx
-                
-                // Logo & Title
+                const cx = 20;
                 addElement('text', '(店名/Logo)', cx+50, 10, 150, 25, 14, 'bold');
                 addElement('title', '電子發票證明聯', cx+30, 40, 200, 30, 18, 'bold');
                 addElement('text', '112年 11-12月', cx+60, 70, 150, 25, 16, 'bold');
-                addElement('field', '發票號碼', cx+40, 95, 200, 25, 18, 'bold'); // AB-12345678
-                
+                addElement('field', '發票號碼', cx+40, 95, 200, 25, 18, 'bold');
                 addElement('text', '隨機碼: 1234   總計: $999', cx+10, 125, 250, 20, 11);
                 addElement('text', '賣方統編: 00000000   買方統編: 00000000', cx+10, 145, 260, 20, 10);
-                
-                // QR Code 佔位符
-                addElement('text', '[QR Code 左]', cx+10, 170, 80, 80, 10, 'normal', '#eee', '1px solid #333');
-                addElement('text', '[QR Code 右]', cx+170, 170, 80, 80, 10, 'normal', '#eee', '1px solid #333');
-                
-                // 交易明細
+                addElement('text', '[QR L]', cx+10, 170, 80, 80, 10, 'normal', '#eee', '1px solid #333');
+                addElement('text', '[QR R]', cx+170, 170, 80, 80, 10, 'normal', '#eee', '1px solid #333');
                 state.config.splitY = 270;
-                addElement('text', '品名', 10, 250, 120, 20, 11, 'normal');
-                addElement('text', '數量', 140, 250, 40, 20, 11, 'normal');
-                addElement('text', '單價', 190, 250, 40, 20, 11, 'normal');
-                addElement('text', '金額', 240, 250, 50, 20, 11, 'normal');
-                
-                // 列表內容
+                addElement('text', '品名', 10, 250, 120, 20, 11); addElement('text', '數量', 140, 250, 40, 20, 11);
+                addElement('text', '單價', 190, 250, 40, 20, 11); addElement('text', '金額', 240, 250, 50, 20, 11);
                 if(state.fields.length > 0) {
-                    addElement('field', state.fields[0], 10, 270, 120, 20, 10); // Product
+                    addElement('field', state.fields[0], 10, 270, 120, 20, 10);
                     addElement('field', '1', 140, 270, 40, 20, 10);
                 }
                 updateSplitLine();
             }
-            // 通用報表
             else if (type === 'table') {
                 setPage('a4', 'portrait', 'group');
-                const colW = 120, rowH = 30;
-                addElement('title', '○○報表', 20, 20, 200, 40, 24, 'bold');
+                const colW = 120;
+                addElement('title', '銷售報表', 20, 20, 200, 40, 24, 'bold');
                 state.config.splitY = 100;
-                
                 state.fields.forEach((f, i) => {
                     const x = 20 + i * colW;
-                    addElement('text', f, x, 70, colW, 30, 13, 'bold', '#f5f5f5', '1px solid #333'); // Header
-                    addElement('field', f, x, 100, colW, 30, 13, 'normal', 'transparent', '1px solid #333'); // Body
+                    addElement('text', f, x, 70, colW, 30, 13, 'bold', '#f5f5f5', '1px solid #333');
+                    addElement('field', f, x, 100, colW, 30, 13, 'normal', 'transparent', '1px solid #333');
                 });
                 updateSplitLine();
             }
-            // 標籤貼紙
             else if (type === 'labels') {
                 setPage('a4', 'portrait', 'grid');
                 state.config.gridCols = 2; state.config.gridRows = 4;
                 state.config.gridGapX = 10; state.config.gridGapY = 10;
-                document.getElementById('gridCols').value = 2;
-                document.getElementById('gridRows').value = 4;
-
+                document.getElementById('gridCols').value = 2; document.getElementById('gridRows').value = 4;
                 const labelW = 350, labelH = 200;
-                addElement('text', '', 0, 0, labelW, labelH, 12, 'normal', 'transparent', '2px solid #ccc'); // Border
+                addElement('text', '', 0, 0, labelW, labelH, 12, 'normal', 'transparent', '2px solid #ccc');
                 addElement('title', '產品標籤', 20, 20, 150, 30, 16, 'bold');
-                
                 let y = 60;
                 state.fields.slice(0, 3).forEach(f => {
                     addElement('text', f+':', 20, y, 80, 25, 12, 'bold');
@@ -351,29 +317,21 @@
             updateSettingsUI();
         }
 
-        // --- 3. Mode & Logic ---
-        els.modeSelect.onchange = (e) => {
-            state.config.mode = e.target.value;
-            updateSettingsUI();
-        };
-
+        // --- Mode & Settings ---
+        els.modeSelect.onchange = (e) => { state.config.mode = e.target.value; updateSettingsUI(); };
         function updateSettingsUI() {
             const m = state.config.mode;
             document.getElementById('groupSettings').style.display = m === 'group' ? 'block' : 'none';
             document.getElementById('gridSettings').style.display = m === 'grid' ? 'block' : 'none';
             els.splitLine.style.display = m === 'group' ? 'block' : 'none';
         }
-
-        // Grid Settings Listeners
         ['gridCols', 'gridRows', 'gridGapX', 'gridGapY'].forEach(id => {
             document.getElementById(id).onchange = (e) => state.config[id] = parseInt(e.target.value);
         });
-        
-        // Group Settings
         document.getElementById('splitYInput').onchange = (e) => { state.config.splitY = +e.target.value; updateSplitLine(); };
         document.getElementById('rowHeightInput').onchange = (e) => state.config.rowHeight = +e.target.value;
 
-        // --- 4. Element CRUD ---
+        // --- Elements ---
         document.getElementById('addTextBtn').onclick = () => addElement('text', '文字', 20, 20);
         document.getElementById('addTitleBtn').onclick = () => addElement('title', '標題', 20, 20, 150, 40, 20, 'bold');
         document.getElementById('addBoxBtn').onclick = () => addElement('text', '', 50, 50, 100, 100, 12, 'normal', 'transparent', '2px solid #333');
@@ -392,12 +350,9 @@
 
         function renderEl(el) {
             const div = document.createElement('div');
-            div.id = el.id;
-            div.className = 'canvas-element';
+            div.id = el.id; div.className = 'canvas-element';
             updateElStyle(div, el);
-            
             div.innerHTML = `<div class="canvas-element-value">${el.type==='field' ? `[${el.content}]` : el.content}</div><div class="resize-handle"></div>`;
-            
             div.onmousedown = (e) => {
                 if(e.target.classList.contains('resize-handle')) return;
                 e.stopPropagation(); selectEl(el);
@@ -406,7 +361,6 @@
                 const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); };
                 document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
             };
-
             const hdl = div.querySelector('.resize-handle');
             hdl.onmousedown = (e) => {
                 e.stopPropagation();
@@ -458,7 +412,7 @@
         };
         window.delEl = (id) => { state.elements = state.elements.filter(e=>e.id!==id); document.getElementById(id).remove(); els.propPanel.innerHTML=''; };
 
-        // --- 5. Upload & Drag ---
+        // --- File & Drag ---
         document.getElementById('uploadArea').onclick = () => document.getElementById('fileInput').click();
         document.getElementById('fileInput').onchange = (e) => {
             const file = e.target.files[0];
@@ -478,7 +432,6 @@
             const sel = document.getElementById('groupFieldSelect');
             sel.innerHTML = `<option value="">--未選擇--</option>` + state.fields.map(f=>`<option value="${f}">${f}</option>`).join('');
         }
-
         function initDrag() {
             els.fieldList.addEventListener('dragstart', e => { e.dataTransfer.setData('type','field'); e.dataTransfer.setData('val', e.target.dataset.f); });
             els.canvas.addEventListener('dragover', e => e.preventDefault());
@@ -489,8 +442,6 @@
                 const rect = els.canvas.getBoundingClientRect();
                 addElement(type, e.dataTransfer.getData('val'), e.clientX-rect.left, e.clientY-rect.top);
             });
-            
-            // Split line drag logic
             let spDrag = false;
             els.splitLine.onmousedown = () => spDrag = true;
             document.onmousemove = (e) => {
@@ -503,10 +454,9 @@
             };
             document.onmouseup = () => spDrag = false;
         }
-
         function updateSplitLine() { els.splitLine.style.top = state.config.splitY + 'px'; }
 
-        // --- 6. PRINT ENGINE ---
+        // --- =========== 修正重點 2: 完善的列印清理邏輯 =========== ---
         document.getElementById('printBtn').onclick = () => {
             const ctr = document.getElementById('print-container');
             ctr.innerHTML = '';
@@ -521,9 +471,23 @@
             else if(mode === 'group') printGroup(ctr);
             else if(mode === 'grid') printGrid(ctr);
 
-            setTimeout(() => window.print(), 500);
+            // 延遲列印，確保 DOM 渲染完畢
+            setTimeout(() => {
+                window.print();
+                
+                // --- 關鍵修正：確保列印後清空 DOM，避免遮擋 ---
+                // 注意：在 Chrome 中 window.print() 會暫停 JS 執行，直到對話框關閉才會執行下一行
+                // 所以這一行會在使用者關閉列印視窗後執行
+                ctr.innerHTML = ''; 
+            }, 500);
         };
 
+        // 額外保險：監聽 afterprint 事件 (部分瀏覽器支援)
+        window.addEventListener("afterprint", (event) => {
+            document.getElementById('print-container').innerHTML = '';
+        });
+
+        // --- Print Helpers ---
         function createPage() {
             const div = document.createElement('div');
             div.className = 'print-page';
@@ -531,7 +495,6 @@
             div.style.height = state.config.pageSize === 'receipt80' ? 'auto' : (state.config.heightMm + 'mm');
             return div;
         }
-
         function createEl(el, row, dx=0, dy=0) {
             const div = document.createElement('div');
             div.className = 'print-element';
@@ -542,8 +505,6 @@
             div.innerText = el.type === 'field' && row ? (row[el.fieldName]||'') : el.content;
             return div;
         }
-
-        // Mode 1: Single
         function printSingle(ctr) {
             state.data.forEach(row => {
                 const pg = createPage();
@@ -551,64 +512,39 @@
                 ctr.appendChild(pg);
             });
         }
-
-        // Mode 2: Master-Detail (Group)
         function printGroup(ctr) {
             const groups = {};
             const keyF = state.config.groupField;
             state.data.forEach(r => { const k = keyF ? r[keyF] : 'ALL'; if(!groups[k]) groups[k]=[]; groups[k].push(r); });
-
             const { splitY, rowHeight } = state.config;
             const hEls = state.elements.filter(e => e.y < splitY);
             const dEls = state.elements.filter(e => e.y >= splitY);
             dEls.forEach(e => e._oy = e.y - splitY);
             const pageH = state.config.pageSize === 'receipt80' ? 99999 : 1050; 
-
             Object.values(groups).forEach(rows => {
                 let pg = createPage();
                 ctr.appendChild(pg);
                 const renderH = () => hEls.forEach(e => pg.appendChild(createEl(e, rows[0])));
                 renderH();
-                
                 let y = splitY;
                 rows.forEach(row => {
-                    if(y + rowHeight > pageH) {
-                        pg = createPage(); ctr.appendChild(pg); renderH(); y = splitY;
-                    }
+                    if(y + rowHeight > pageH) { pg = createPage(); ctr.appendChild(pg); renderH(); y = splitY; }
                     dEls.forEach(e => pg.appendChild(createEl(e, row, 0, y + e._oy - e.y)));
                     y += rowHeight;
                 });
             });
         }
-
-        // Mode 3: Grid
         function printGrid(ctr) {
             const { gridCols, gridRows, gridGapX, gridGapY } = state.config;
             let maxX = 0, maxY = 0;
-            state.elements.forEach(e => {
-                maxX = Math.max(maxX, e.x + e.width);
-                maxY = Math.max(maxY, e.y + e.height);
-            });
-            const cellW = maxX + gridGapX;
-            const cellH = maxY + gridGapY;
-
-            let pg = createPage();
-            ctr.appendChild(pg);
-            let idx = 0;
-
+            state.elements.forEach(e => { maxX = Math.max(maxX, e.x+e.width); maxY = Math.max(maxY, e.y+e.height); });
+            const cellW = maxX + gridGapX; const cellH = maxY + gridGapY;
+            let pg = createPage(); ctr.appendChild(pg); let idx = 0;
             state.data.forEach(row => {
-                if(idx >= gridCols * gridRows) {
-                    pg = createPage();
-                    ctr.appendChild(pg);
-                    idx = 0;
-                }
-                const col = idx % gridCols;
-                const r = Math.floor(idx / gridCols);
-                const offsetX = col * cellW;
-                const offsetY = r * cellH;
-                state.elements.forEach(el => {
-                    pg.appendChild(createEl(el, row, offsetX, offsetY));
-                });
+                if(idx >= gridCols * gridRows) { pg = createPage(); ctr.appendChild(pg); idx = 0; }
+                const col = idx % gridCols; const r = Math.floor(idx / gridCols);
+                const offsetX = col * cellW; const offsetY = r * cellH;
+                state.elements.forEach(el => pg.appendChild(createEl(el, row, offsetX, offsetY)));
                 idx++;
             });
         }
