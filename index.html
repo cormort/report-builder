@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Report Studio v9.0 - 終極完整版</title>
-    <!-- PDF.js -->
+    <title>Pro Report Studio v9.2 - 線條修復版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Material+Symbols+Outlined" rel="stylesheet">
@@ -13,12 +12,10 @@
         * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
         body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; user-select: none; }
         
-        /* Header */
+        /* Header & Layout */
         .header { height: 60px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; justify-content: space-between; z-index: 200; }
         .title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; color: white; }
         .toolbar { display: flex; gap: 8px; }
-
-        /* Layout */
         .main-layout { flex: 1; display: flex; overflow: hidden; }
         .left-panel, .right-panel { width: 300px; background: var(--surface); display: flex; flex-direction: column; z-index: 100; border-color: var(--border); }
         .left-panel { border-right: 1px solid var(--border); }
@@ -35,7 +32,6 @@
         .btn { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 13px; background: var(--surface2); color: var(--text); display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition:0.2s; }
         .btn:hover { background: #475569; }
         .btn-primary { background: var(--primary); color: white; border: none; }
-        .btn-success { background: var(--success); color: white; border: none; }
         .btn-danger { background: var(--danger); color: white; border: none; }
         .btn-block { width: 100%; }
         .form-group { margin-bottom: 12px; }
@@ -46,7 +42,10 @@
         .center-panel { flex: 1; background: #0f172a; display: flex; justify-content: center; overflow: auto; padding: 40px; position: relative; }
         .canvas { background-color: white; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.5); transform-origin: top center; background-image: linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px); background-size: 20px 20px; }
         
-        .canvas-element { position: absolute; cursor: move; display: flex; align-items: center; box-sizing: border-box; overflow: hidden; }
+        .canvas-element { 
+            position: absolute; cursor: move; display: flex; align-items: center; box-sizing: border-box; overflow: hidden; 
+            -webkit-print-color-adjust: exact; print-color-adjust: exact; /* 強制列印背景色 */
+        }
         .canvas-element:hover { outline: 1px dashed var(--primary); }
         .canvas-element.selected { outline: 2px solid var(--primary); }
         .canvas-element-value { width: 100%; pointer-events: none; overflow: hidden; white-space: nowrap; }
@@ -55,16 +54,14 @@
         .selected .resize-handle { display: block; }
         .rh-se { bottom: -4px; right: -4px; cursor: se-resize; }
 
-        /* Guides */
+        /* Helpers */
         .guide-line { position: absolute; background: var(--guide); pointer-events: none; z-index: 9999; display: none; }
         .guide-x { width: 100%; height: 1px; border-top: 1px dashed var(--guide); }
         .guide-y { height: 100%; width: 1px; border-left: 1px dashed var(--guide); }
-
-        /* Floating Toolbar */
+        
         .floating-toolbar { position: absolute; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 4px; display: none; gap: 4px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
         .floating-toolbar.show { display: flex; }
 
-        /* Table & Print */
         .table-element { display: block !important; border: none !important; }
         .drop-zone { transition: 0.2s; }
         #splitLine { position: absolute; left: 0; width: 100%; border-top: 2px dashed var(--danger); z-index: 9000; display: none; cursor: ns-resize; }
@@ -86,7 +83,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="title"><span class="material-symbols-outlined">auto_fix_high</span> Pro Report v9.0</div>
+        <div class="title"><span class="material-symbols-outlined">auto_fix_high</span> Pro Report v9.2</div>
         <div class="toolbar">
             <button class="btn" onclick="undo()" title="Ctrl+Z">↩ 復原</button>
             <button class="btn" onclick="saveProject()">💾 存檔</button>
@@ -109,8 +106,10 @@
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:15px">
                     <button class="btn" onclick="addEl('text','文字標籤')"><span class="material-symbols-outlined">text_fields</span> 文字</button>
                     <button class="btn" onclick="addEl('title','標題',null,null,200,30,20,'bold')"><span class="material-symbols-outlined">title</span> 標題</button>
-                    <button class="btn" onclick="addEl('text','',50,50,100,100,12,'normal','transparent','2px solid #000')"><span class="material-symbols-outlined">check_box_outline_blank</span> 矩形</button>
-                    <button class="btn" onclick="addEl('text','',50,50,200,2,12,'normal','#000','none')"><span class="material-symbols-outlined">horizontal_rule</span> 橫線</button>
+                    <!-- 修正：矩形、橫線、直線全部改用 Border (更穩定) -->
+                    <button class="btn" onclick="addEl('text','',50,50,100,100,12,'normal','transparent','2px solid #000000')"><span class="material-symbols-outlined">check_box_outline_blank</span> 矩形</button>
+                    <button class="btn" onclick="addEl('text','',50,50,200,0,12,'normal','transparent','2px solid #000000')"><span class="material-symbols-outlined">horizontal_rule</span> 橫線</button>
+                    <button class="btn" onclick="addEl('text','',50,50,0,200,12,'normal','transparent','2px solid #000000')"><span class="material-symbols-outlined">vertical_shades</span> 直線</button>
                     <button class="btn" onclick="addEl('qrcode','QR',50,50,50,50)"><span class="material-symbols-outlined">qr_code</span> QR Code</button>
                 </div>
                 <button class="btn btn-block" onclick="el('modal-tbl').style.display='flex'"><span class="material-symbols-outlined">table_chart</span> 插入表格</button>
@@ -148,8 +147,8 @@
             </div>
             <div class="floating-toolbar" id="floatBar">
                 <button class="btn btn-sm" onclick="dupEl()" title="複製"><span class="material-symbols-outlined">content_copy</span></button>
-                <button class="btn btn-sm" onclick="zOrder(1)" title="移到最上層"><span class="material-symbols-outlined">arrow_upward</span></button>
-                <button class="btn btn-sm" onclick="zOrder(-1)" title="移到最下層"><span class="material-symbols-outlined">arrow_downward</span></button>
+                <button class="btn btn-sm" onclick="zOrder(1)" title="移至最上層 (Bring to Front)"><span class="material-symbols-outlined">flip_to_front</span></button>
+                <button class="btn btn-sm" onclick="zOrder(-1)" title="移至最下層 (Send to Back)"><span class="material-symbols-outlined">flip_to_back</span></button>
                 <button class="btn btn-sm btn-danger" onclick="delEl()" title="刪除"><span class="material-symbols-outlined">delete</span></button>
             </div>
         </div>
@@ -305,7 +304,7 @@
             d.style.width=tw+'px'; d.style.height=th+'px'; d.style.zIndex=idx+1;
 
             let h = `<div style="display:flex;height:${item.headH}px">`;
-            item.cols.forEach((c,i)=> h+=`<div style="width:${item.colW[i]}px;border:1px solid #000;background:#eee;padding:2px;font-size:12px;overflow:hidden">${c}</div>`);
+            item.cols.forEach((c,i)=> h+=`<div style="width:${item.colW[i]}px;border:1px solid #000000;background:#eee;padding:2px;font-size:12px;overflow:hidden">${c}</div>`);
             h += `</div><div style="display:flex;height:${item.rowH}px">`;
             item.fields.forEach((f,i)=> h+=`<div class="drop-zone" data-id="${item.id}" data-idx="${i}" style="width:${item.colW[i]}px;border:1px solid #ccc;padding:2px;font-size:12px;background:rgba(255,255,255,0.8)">[${f||''}]</div>`);
             h += `</div>`;
@@ -332,9 +331,7 @@
                 const dx=ev.clientX-sx, dy=ev.clientY-sy;
                 if(mode==='move') {
                     let nx=ox+dx, ny=oy+dy;
-                    // Snap Logic
                     let snapX=null, snapY=null;
-                    const midX=nx+ow/2, midY=ny+oh/2;
                     state.els.forEach(o => {
                         if(o.id===item.id) return;
                         if(Math.abs(nx-o.x)<5) { nx=o.x; snapY=o.x; }
@@ -346,7 +343,7 @@
                     gx.style.display=snapX!==null?'block':'none'; if(snapX) gx.style.top=(snapX+state.cfg.offY)+'px';
                     gy.style.display=snapY!==null?'block':'none'; if(snapY) gy.style.left=(snapY+state.cfg.offX)+'px';
                 } else {
-                    item.w=Math.max(10,ow+dx); item.h=Math.max(10,oh+dy);
+                    item.w=Math.max(0,ow+dx); item.h=Math.max(0,oh+dy);
                 }
                 render();
             };
@@ -461,7 +458,7 @@
 
         // --- Save/Load Project ---
         function saveProject() {
-            const b=new Blob([JSON.stringify({v:'9.0', ...state})],{type:'application/json'});
+            const b=new Blob([JSON.stringify({v:'9.2', ...state})],{type:'application/json'});
             const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`project-${Date.now()}.prs`; a.click();
         }
         function loadProject() { el('f-proj').click(); }
@@ -478,14 +475,14 @@
             if(!confirm('覆蓋？')) return; state.els=[];
             if(t==='invoice') {
                 state.cfg.mode='group'; state.cfg.splitY=160;
-                addEl('text','',20,110,700,2,12,'normal','#000','none');
+                addEl('text','',20,110,700,0,12,'normal','transparent','2px solid #000000');
                 addEl('title','電子發票',250,40,300,30,24,'bold');
                 addEl('text','日期: 2025-01-01',500,80,200,20);
                 const tb={id:'t1',type:'table',x:40,y:170,cols:['品名','數量','單價','金額'],fields:['品名','數量','單價','金額'],colW:[250,80,100,100],headH:30,rowH:30};
                 state.els.push(tb); state.data=[{品名:'A',數量:'1',單價:'10',金額:'10'},{品名:'B',數量:'2',單價:'20',金額:'40'}];
             } else if(t==='label') {
                 state.cfg.mode='grid'; state.cfg.gC=2; state.cfg.gR=4;
-                addEl('text','',10,10,300,180,12,'normal','transparent','2px solid #000');
+                addEl('text','',10,10,300,180,12,'normal','transparent','2px solid #000000');
                 addEl('field','品名',50,50,200,30,20,'bold');
                 state.data=[{品名:'商品A'},{品名:'商品B'}];
             } else if(t==='ship') {
@@ -499,7 +496,7 @@
             swTab(document.querySelector('.tab-btn:nth-child(2)'),'t2');
         }
 
-        // --- Advanced Print (The Missing Part Restored) ---
+        // --- Print ---
         function printDoc() {
             const c=el('print-container'); c.innerHTML='';
             const css=document.createElement('style');
@@ -515,17 +512,15 @@
                     c.appendChild(pg);
                 });
             } else if(state.cfg.mode === 'grid') {
-                // Grid Mode
                 const {gC,gR,gX,gY} = state.cfg;
                 let pg = document.createElement('div'); pg.className='p-pg';
                 let idx = 0;
-                // Calculate item size
                 let maxW=0, maxH=0; state.els.forEach(e=>{maxW=Math.max(maxW,e.x+e.w); maxH=Math.max(maxH,e.y+e.h);});
                 
                 dt.forEach(d => {
                     if(idx >= gC*gR) { c.appendChild(pg); pg=document.createElement('div'); pg.className='p-pg'; idx=0; }
                     const col=idx%gC, row=Math.floor(idx/gC);
-                    const ox = col*(maxW+gX)+20, oy = row*(maxH+gY)+20; // 20 padding
+                    const ox = col*(maxW+gX)+20, oy = row*(maxH+gY)+20;
                     state.els.forEach(e => {
                         const el = mkEl(e, d);
                         el.style.left = (e.x+ox+state.cfg.offX)+'px';
@@ -536,7 +531,6 @@
                 });
                 c.appendChild(pg);
             } else {
-                // Group Mode
                 const pg = document.createElement('div'); pg.className = 'p-pg';
                 state.els.filter(e=>e.y<state.cfg.splitY).forEach(e=>pg.appendChild(mkEl(e, dt[0])));
                 
@@ -553,17 +547,15 @@
                         tr.style.top=cy+'px'; tr.style.left=(tbl.x+state.cfg.offX)+'px';
                         pg.appendChild(tr); cy+=tbl.rowH;
                         
-                        // Page Break Check
                         if(cy > (state.cfg.h*3.78)-50) {
                             c.appendChild(pg);
                             const nPg = document.createElement('div'); nPg.className='p-pg';
-                            // Reprint Header
                             state.els.filter(e=>e.y<state.cfg.splitY).forEach(e=>nPg.appendChild(mkEl(e, dt[0])));
                             cy = state.cfg.splitY;
                             const nth = mkTbl(tbl, null, true);
                             nth.style.top=cy+'px'; nth.style.left=(tbl.x+state.cfg.offX)+'px';
                             nPg.appendChild(nth); cy+=tbl.headH;
-                            pg=nPg; // switch current page
+                            pg=nPg; 
                         }
                     });
                 }
