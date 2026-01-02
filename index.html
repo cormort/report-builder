@@ -3,72 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Report Studio v9.2 - 線條修復版</title>
+    <title>Pro Report Studio v9.3 - 公務報表專用版</title>
+    <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Material+Symbols+Outlined" rel="stylesheet">
     <style>
-        :root { --primary: #6366f1; --bg: #0f172a; --surface: #1e293b; --surface2: #334155; --border: #475569; --text: #e2e8f0; --success: #10b981; --danger: #ef4444; --guide: #0ea5e9; }
+        :root { --primary: #00897b; /* 改為公務綠 */ --bg: #f8fafc; --surface: #ffffff; --border: #cbd5e1; --text: #334155; --guide: #0ea5e9; }
         * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
         body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; user-select: none; }
         
-        /* Header & Layout */
-        .header { height: 60px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; justify-content: space-between; z-index: 200; }
-        .title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; color: white; }
+        /* Header */
+        .header { height: 60px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; justify-content: space-between; z-index: 200; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; color: var(--primary); }
         .toolbar { display: flex; gap: 8px; }
+
+        /* Layout */
         .main-layout { flex: 1; display: flex; overflow: hidden; }
-        .left-panel, .right-panel { width: 300px; background: var(--surface); display: flex; flex-direction: column; z-index: 100; border-color: var(--border); }
+        .left-panel, .right-panel { width: 320px; background: #f1f5f9; display: flex; flex-direction: column; z-index: 100; border-color: var(--border); }
         .left-panel { border-right: 1px solid var(--border); }
-        .right-panel { border-left: 1px solid var(--border); }
+        .right-panel { border-left: 1px solid var(--border); background: white; }
 
         /* Tabs */
-        .tab-nav { display: flex; background: var(--surface2); border-bottom: 1px solid var(--border); }
-        .tab-btn { flex: 1; padding: 12px 0; text-align: center; cursor: pointer; color: #94a3b8; font-size: 13px; border-bottom: 2px solid transparent; }
-        .tab-btn.active { color: white; background: rgba(99,102,241,0.1); border-bottom-color: var(--primary); }
+        .tab-nav { display: flex; background: white; border-bottom: 1px solid var(--border); }
+        .tab-btn { flex: 1; padding: 12px 0; text-align: center; cursor: pointer; color: #64748b; font-size: 13px; font-weight: 500; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: var(--primary); background: rgba(0,137,123,0.05); border-bottom-color: var(--primary); }
         .tab-content { flex: 1; overflow-y: auto; padding: 16px; display: none; }
         .tab-content.active { display: block; }
 
         /* Components */
-        .btn { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 13px; background: var(--surface2); color: var(--text); display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition:0.2s; }
-        .btn:hover { background: #475569; }
+        .btn { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 13px; background: white; color: var(--text); display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition:0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .btn:hover { background: #f8fafc; border-color: var(--primary); color: var(--primary); }
         .btn-primary { background: var(--primary); color: white; border: none; }
-        .btn-danger { background: var(--danger); color: white; border: none; }
+        .btn-primary:hover { background: #00796b; color: white; }
+        .btn-danger { background: #ef4444; color: white; border: none; }
+        .btn-danger:hover { background: #dc2626; color: white; }
         .btn-block { width: 100%; }
         .form-group { margin-bottom: 12px; }
-        .form-label { font-size: 12px; color: #94a3b8; margin-bottom: 4px; display: block; }
-        .form-control { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); font-size: 13px; }
+        .form-label { font-size: 12px; color: #64748b; margin-bottom: 4px; display: block; }
+        .form-control { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: white; color: var(--text); font-size: 13px; }
 
         /* Canvas */
-        .center-panel { flex: 1; background: #0f172a; display: flex; justify-content: center; overflow: auto; padding: 40px; position: relative; }
-        .canvas { background-color: white; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.5); transform-origin: top center; background-image: linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px); background-size: 20px 20px; }
+        .center-panel { flex: 1; background: #cbd5e1; display: flex; justify-content: center; overflow: auto; padding: 40px; position: relative; }
+        .canvas { background-color: white; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.2); transform-origin: top center; }
+        /* 格線背景 */
+        .canvas-grid { background-image: linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px); background-size: 20px 20px; }
         
         .canvas-element { 
             position: absolute; cursor: move; display: flex; align-items: center; box-sizing: border-box; overflow: hidden; 
-            -webkit-print-color-adjust: exact; print-color-adjust: exact; /* 強制列印背景色 */
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
         }
         .canvas-element:hover { outline: 1px dashed var(--primary); }
-        .canvas-element.selected { outline: 2px solid var(--primary); }
-        .canvas-element-value { width: 100%; pointer-events: none; overflow: hidden; white-space: nowrap; }
+        .canvas-element.selected { outline: 2px solid var(--primary); z-index: 1000 !important; }
+        .canvas-element-value { width: 100%; pointer-events: none; overflow: hidden; white-space: pre-wrap; word-break: break-all; }
 
-        .resize-handle { position: absolute; width: 8px; height: 8px; background: white; border: 1px solid var(--primary); border-radius: 50%; display: none; }
+        .resize-handle { position: absolute; width: 10px; height: 10px; background: white; border: 2px solid var(--primary); border-radius: 50%; display: none; }
         .selected .resize-handle { display: block; }
-        .rh-se { bottom: -4px; right: -4px; cursor: se-resize; }
+        .rh-se { bottom: -5px; right: -5px; cursor: se-resize; }
 
-        /* Helpers */
+        /* Guides */
         .guide-line { position: absolute; background: var(--guide); pointer-events: none; z-index: 9999; display: none; }
         .guide-x { width: 100%; height: 1px; border-top: 1px dashed var(--guide); }
         .guide-y { height: 100%; width: 1px; border-left: 1px dashed var(--guide); }
         
-        .floating-toolbar { position: absolute; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 4px; display: none; gap: 4px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .floating-toolbar { position: absolute; background: white; border: 1px solid var(--border); border-radius: 6px; padding: 4px; display: none; gap: 4px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         .floating-toolbar.show { display: flex; }
 
         .table-element { display: block !important; border: none !important; }
         .drop-zone { transition: 0.2s; }
-        #splitLine { position: absolute; left: 0; width: 100%; border-top: 2px dashed var(--danger); z-index: 9000; display: none; cursor: ns-resize; }
-        #splitLine::after { content: "分組/分頁線"; position: absolute; right: 0; top: -20px; background: var(--danger); color: white; padding: 2px 5px; font-size: 10px; border-radius: 3px; }
+        #splitLine { position: absolute; left: 0; width: 100%; border-top: 2px dashed #ef4444; z-index: 9000; display: none; cursor: ns-resize; }
+        #splitLine::after { content: "資料起始線 (由此重複)"; position: absolute; right: 0; top: -20px; background: #ef4444; color: white; padding: 2px 6px; font-size: 11px; border-radius: 3px; }
         
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
-        .modal { background: var(--surface); padding: 20px; border-radius: 8px; width: 300px; border: 1px solid var(--border); }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+        .modal { background: white; padding: 24px; border-radius: 12px; width: 320px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
 
         #print-container { display: none; }
         @media print {
@@ -83,7 +90,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="title"><span class="material-symbols-outlined">auto_fix_high</span> Pro Report v9.2</div>
+        <div class="title"><span class="material-symbols-outlined">description</span> Pro Report v9.3 公務版</div>
         <div class="toolbar">
             <button class="btn" onclick="undo()" title="Ctrl+Z">↩ 復原</button>
             <button class="btn" onclick="saveProject()">💾 存檔</button>
@@ -97,64 +104,72 @@
     <div class="main-layout">
         <div class="left-panel">
             <div class="tab-nav">
-                <div class="tab-btn active" onclick="swTab(this, 't1')">元件</div>
+                <div class="tab-btn active" onclick="swTab(this, 't1')">元件工具</div>
                 <div class="tab-btn" onclick="swTab(this, 't2')">資料/底圖</div>
-                <div class="tab-btn" onclick="swTab(this, 't3')">範例</div>
+                <div class="tab-btn" onclick="swTab(this, 't3')">快速範本</div>
             </div>
             
             <div id="t1" class="tab-content active">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:15px">
-                    <button class="btn" onclick="addEl('text','文字標籤')"><span class="material-symbols-outlined">text_fields</span> 文字</button>
-                    <button class="btn" onclick="addEl('title','標題',null,null,200,30,20,'bold')"><span class="material-symbols-outlined">title</span> 標題</button>
-                    <!-- 修正：矩形、橫線、直線全部改用 Border (更穩定) -->
+                    <button class="btn" onclick="addEl('text','文字')"><span class="material-symbols-outlined">text_fields</span> 文字</button>
+                    <button class="btn" onclick="addEl('title','標題',null,null,300,40,24,'bold')"><span class="material-symbols-outlined">title</span> 標題</button>
                     <button class="btn" onclick="addEl('text','',50,50,100,100,12,'normal','transparent','2px solid #000000')"><span class="material-symbols-outlined">check_box_outline_blank</span> 矩形</button>
-                    <button class="btn" onclick="addEl('text','',50,50,200,0,12,'normal','transparent','2px solid #000000')"><span class="material-symbols-outlined">horizontal_rule</span> 橫線</button>
-                    <button class="btn" onclick="addEl('text','',50,50,0,200,12,'normal','transparent','2px solid #000000')"><span class="material-symbols-outlined">vertical_shades</span> 直線</button>
-                    <button class="btn" onclick="addEl('qrcode','QR',50,50,50,50)"><span class="material-symbols-outlined">qr_code</span> QR Code</button>
+                    <button class="btn" onclick="addEl('text','',50,50,200,0,12,'normal','transparent','1px solid #000000')"><span class="material-symbols-outlined">horizontal_rule</span> 橫線</button>
+                    <button class="btn" onclick="addEl('text','',50,50,0,200,12,'normal','transparent','1px solid #000000')"><span class="material-symbols-outlined">vertical_shades</span> 直線</button>
                 </div>
-                <button class="btn btn-block" onclick="el('modal-tbl').style.display='flex'"><span class="material-symbols-outlined">table_chart</span> 插入表格</button>
+                <button class="btn btn-block" onclick="el('modal-tbl').style.display='flex'"><span class="material-symbols-outlined">table_chart</span> 插入標準表格</button>
+                <div style="font-size:11px;color:#666;margin-top:5px;text-align:center">表格可用於處理大量數據行</div>
             </div>
             
             <div id="t2" class="tab-content">
                 <div style="border-bottom:1px solid var(--border);padding-bottom:15px;margin-bottom:15px">
-                    <label class="form-label" style="color:var(--primary);font-weight:bold">📄 PDF 底圖描圖</label>
-                    <button class="btn btn-block" onclick="el('f-pdf').click()"><span class="material-symbols-outlined">upload_file</span> 上傳 PDF</button>
+                    <label class="form-label" style="color:var(--primary);font-weight:bold">📄 PDF 底圖 (描圖用)</label>
+                    <button class="btn btn-block" onclick="el('f-pdf').click()"><span class="material-symbols-outlined">upload_file</span> 上傳 PDF 範本</button>
                     <input type="file" id="f-pdf" hidden accept=".pdf" onchange="loadPdfBg(this)">
                     <div id="bg-ctrl" style="display:none;margin-top:10px">
-                        <label class="form-label">透明度</label>
+                        <label class="form-label">底圖透明度</label>
                         <input type="range" min="0" max="100" value="0" class="form-control" oninput="updBgOp(this.value)">
                         <button class="btn btn-danger btn-block btn-sm" style="margin-top:5px" onclick="clrBg()">清除底圖</button>
                     </div>
                 </div>
-                <label class="form-label" style="color:var(--success);font-weight:bold">📊 資料來源</label>
-                <button class="btn btn-block" onclick="el('f-csv').click()">匯入 CSV/JSON</button>
+                <label class="form-label" style="color:var(--primary);font-weight:bold">📊 匯入資料</label>
+                <button class="btn btn-block" onclick="el('f-csv').click()">匯入 CSV / Excel(CSV)</button>
                 <input type="file" id="f-csv" hidden onchange="loadData(this)">
                 <div id="field-list" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:5px"></div>
             </div>
             
             <div id="t3" class="tab-content">
-                <button class="btn btn-block" style="margin-bottom:8px" onclick="loadDemo('invoice')">🧾 三聯式發票 (Group)</button>
-                <button class="btn btn-block" style="margin-bottom:8px" onclick="loadDemo('label')">🏷️ 標籤貼紙 (Grid)</button>
-                <button class="btn btn-block" onclick="loadDemo('ship')">🚚 出貨單 (Group)</button>
+                <div style="background:#e0f2f1;padding:10px;border-radius:6px;margin-bottom:15px;border:1px solid #00897b;">
+                    <strong style="color:#00695c;display:block;margin-bottom:5px">🚀 您的需求：</strong>
+                    <button class="btn btn-primary btn-block" style="text-align:left;font-weight:bold" onclick="genGovTable()">
+                        <span class="material-symbols-outlined">playlist_add</span> 建立「收支概況彙總表」
+                    </button>
+                    <div style="font-size:11px;color:#00695c;margin-top:5px">自動生成：複雜表頭、合併欄位線條、數據表格</div>
+                </div>
+                
+                <hr style="margin:15px 0;border:0;border-top:1px solid #eee">
+                <div style="font-weight:bold;margin-bottom:10px">其他範例</div>
+                <button class="btn btn-block" style="margin-bottom:8px" onclick="loadDemo('invoice')">🧾 發票範例</button>
+                <button class="btn btn-block" onclick="loadDemo('label')">🏷️ 標籤範例</button>
             </div>
         </div>
 
         <div class="center-panel" id="canvas-wrap">
-            <div class="canvas" id="canvas">
+            <div class="canvas canvas-grid" id="canvas">
                 <div id="splitLine"></div>
                 <div id="guideX" class="guide-line guide-x"></div>
                 <div id="guideY" class="guide-line guide-y"></div>
             </div>
             <div class="floating-toolbar" id="floatBar">
                 <button class="btn btn-sm" onclick="dupEl()" title="複製"><span class="material-symbols-outlined">content_copy</span></button>
-                <button class="btn btn-sm" onclick="zOrder(1)" title="移至最上層 (Bring to Front)"><span class="material-symbols-outlined">flip_to_front</span></button>
-                <button class="btn btn-sm" onclick="zOrder(-1)" title="移至最下層 (Send to Back)"><span class="material-symbols-outlined">flip_to_back</span></button>
+                <button class="btn btn-sm" onclick="zOrder(1)" title="移至最上層"><span class="material-symbols-outlined">flip_to_front</span></button>
+                <button class="btn btn-sm" onclick="zOrder(-1)" title="移至最下層"><span class="material-symbols-outlined">flip_to_back</span></button>
                 <button class="btn btn-sm btn-danger" onclick="delEl()" title="刪除"><span class="material-symbols-outlined">delete</span></button>
             </div>
         </div>
 
         <div class="right-panel">
-            <div style="padding:10px;border-bottom:1px solid var(--border);font-weight:bold">屬性設定</div>
+            <div style="padding:15px;border-bottom:1px solid var(--border);font-weight:bold;color:var(--text)">屬性設定</div>
             <div id="props" style="padding:15px"></div>
         </div>
     </div>
@@ -162,8 +177,9 @@
     <!-- Modals -->
     <div class="modal-overlay" id="modal-tbl">
         <div class="modal">
-            <h3>插入表格</h3>
-            <div class="form-group" style="margin-top:15px"><label>欄位數量</label><input type="number" id="tbl-cols" value="4" class="form-control"></div>
+            <h3 style="margin-bottom:15px">插入標準表格</h3>
+            <div class="form-group"><label class="form-label">欄位數量</label><input type="number" id="tbl-cols" value="5" class="form-control"></div>
+            <div class="form-group"><label class="form-label">表頭高度 (0=隱藏)</label><input type="number" id="tbl-hh" value="30" class="form-control"></div>
             <div style="display:flex;gap:10px;margin-top:20px">
                 <button class="btn btn-block" onclick="el('modal-tbl').style.display='none'">取消</button>
                 <button class="btn btn-primary btn-block" onclick="addTable()">插入</button>
@@ -177,7 +193,7 @@
         const el = id => document.getElementById(id);
         const state = { 
             els: [], data: [], fields: [], sel: null, 
-            cfg: { size: 'a4', orient: 'portrait', w: 210, h: 297, mode: 'single', splitY: 150, offX:0, offY:0, gC:2, gR:4, gX:5, gY:5 },
+            cfg: { size: 'a4', orient: 'landscape', w: 297, h: 210, mode: 'single', splitY: 150, offX:0, offY:0, gC:2, gR:4, gX:5, gY:5 },
             bgUrl: null 
         };
         const history = [];
@@ -241,11 +257,13 @@
         // --- Core Logic ---
         function addEl(type, txt, x=20, y=20, w=100, h=30, fs=12, fw='normal', bg='transparent', br='none') {
             const id = Math.random().toString(36).substr(2,9);
-            const item = { id, type, txt, x, y, w, h, fs, fw, bg, br, color:'#000000', align:'left' };
+            const item = { id, type, txt, x, y, w, h, fs, fw, bg, br, color:'#000000', align:'center' };
             if(type==='field') item.field=txt;
             state.els.push(item); state.sel=id; render(); saveState();
+            return item;
         }
 
+        // ★★★ 核心渲染：嚴格順序 ★★★
         function render() {
             const c = el('canvas');
             const spl = el('splitLine');
@@ -284,6 +302,8 @@
             
             d.style.color = item.color; d.style.fontSize = item.fs+'px'; d.style.fontWeight = item.fw;
             const txt = item.type==='field' ? `[${item.txt}]` : item.txt;
+            // 垂直置中
+            d.style.display = 'flex'; d.style.alignItems = 'center'; d.style.justifyContent = item.align==='center'?'center':(item.align==='right'?'flex-end':'flex-start');
             d.innerHTML = `<div class="canvas-element-value" style="text-align:${item.align}">${txt}</div>`;
             
             if(state.sel===item.id) {
@@ -303,10 +323,14 @@
             d.style.left=(item.x+state.cfg.offX)+'px'; d.style.top=(item.y+state.cfg.offY)+'px';
             d.style.width=tw+'px'; d.style.height=th+'px'; d.style.zIndex=idx+1;
 
-            let h = `<div style="display:flex;height:${item.headH}px">`;
-            item.cols.forEach((c,i)=> h+=`<div style="width:${item.colW[i]}px;border:1px solid #000000;background:#eee;padding:2px;font-size:12px;overflow:hidden">${c}</div>`);
-            h += `</div><div style="display:flex;height:${item.rowH}px">`;
-            item.fields.forEach((f,i)=> h+=`<div class="drop-zone" data-id="${item.id}" data-idx="${i}" style="width:${item.colW[i]}px;border:1px solid #ccc;padding:2px;font-size:12px;background:rgba(255,255,255,0.8)">[${f||''}]</div>`);
+            let h = '';
+            if(item.headH > 0) {
+                h += `<div style="display:flex;height:${item.headH}px">`;
+                item.cols.forEach((c,i)=> h+=`<div style="width:${item.colW[i]}px;border:1px solid #000;background:#f8fafc;padding:4px;font-size:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;text-align:center">${c}</div>`);
+                h += `</div>`;
+            }
+            h += `<div style="display:flex;height:${item.rowH}px">`;
+            item.fields.forEach((f,i)=> h+=`<div class="drop-zone" data-id="${item.id}" data-idx="${i}" style="width:${item.colW[i]}px;border:1px solid #94a3b8;padding:4px;font-size:12px;background:rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center">${f?`[${f}]`:''}</div>`);
             h += `</div>`;
             d.innerHTML = h;
 
@@ -322,7 +346,7 @@
             el('canvas').appendChild(d);
         }
 
-        // --- Drag & Snap ---
+        // --- Drag & Snap (Auto Guide) ---
         function drag(e, item, mode) {
             const sx=e.clientX, sy=e.clientY, ox=item.x, oy=item.y, ow=item.w, oh=item.h;
             const gx=el('guideX'), gy=el('guideY');
@@ -343,7 +367,7 @@
                     gx.style.display=snapX!==null?'block':'none'; if(snapX) gx.style.top=(snapX+state.cfg.offY)+'px';
                     gy.style.display=snapY!==null?'block':'none'; if(snapY) gy.style.left=(snapY+state.cfg.offX)+'px';
                 } else {
-                    item.w=Math.max(0,ow+dx); item.h=Math.max(0,oh+dy);
+                    item.w=Math.max(2,ow+dx); item.h=Math.max(2,oh+dy);
                 }
                 render();
             };
@@ -359,28 +383,27 @@
             const p = el('props');
             if(!item) {
                 p.innerHTML=`
-                <div class="form-group"><label class="form-label">紙張</label><select class="form-control" onchange="state.cfg.size=this.value;updCanvasSz();saveState()"><option value="a4">A4</option><option value="receipt80">80mm</option></select></div>
-                <div class="form-group"><label class="form-label">方向</label><select class="form-control" onchange="state.cfg.orient=this.value;updCanvasSz();saveState()"><option value="portrait">直向</option><option value="landscape">橫向</option></select></div>
-                <div class="form-group"><label class="form-label">模式</label><select class="form-control" onchange="state.cfg.mode=this.value;render();saveState()"><option value="single">單頁</option><option value="group">清單(Group)</option><option value="grid">標籤(Grid)</option></select></div>
-                ${state.cfg.mode==='grid'?`<div style="padding:10px;background:#f0f9ff;border-radius:4px;margin-bottom:10px">
-                    <label class="form-label">Grid (欄 x 列)</label><div style="display:flex;gap:5px"><input class="form-control" type="number" value="${state.cfg.gC}" onchange="state.cfg.gC=+this.value;saveState()"><input class="form-control" type="number" value="${state.cfg.gR}" onchange="state.cfg.gR=+this.value;saveState()"></div>
-                    <label class="form-label">間距 X/Y</label><div style="display:flex;gap:5px"><input class="form-control" type="number" value="${state.cfg.gX}" onchange="state.cfg.gX=+this.value;saveState()"><input class="form-control" type="number" value="${state.cfg.gY}" onchange="state.cfg.gY=+this.value;saveState()"></div>
-                </div>`:''}
-                <div class="form-group"><label class="form-label">全域偏移 X/Y</label><div style="display:flex;gap:5px"><input class="form-control" type="number" value="${state.cfg.offX}" onchange="state.cfg.offX=+this.value;render();saveState()"><input class="form-control" type="number" value="${state.cfg.offY}" onchange="state.cfg.offY=+this.value;render();saveState()"></div></div>`;
+                <div class="form-group"><label class="form-label">紙張</label><select class="form-control" onchange="state.cfg.size=this.value;updCanvasSz();saveState()"><option value="a4">A4 (210x297)</option><option value="a5">A5</option></select></div>
+                <div class="form-group"><label class="form-label">方向</label><select class="form-control" onchange="state.cfg.orient=this.value;updCanvasSz();saveState()"><option value="landscape">橫向 (Landscape)</option><option value="portrait">直向 (Portrait)</option></select></div>
+                <div class="form-group"><label class="form-label">模式</label><select class="form-control" onchange="state.cfg.mode=this.value;render();saveState()"><option value="single">單頁 (Single)</option><option value="group">自動分頁清單 (Group)</option></select></div>
+                <div class="form-group"><label class="form-label">全域偏移 (印表機修正)</label><div style="display:flex;gap:5px"><input class="form-control" type="number" placeholder="X" value="${state.cfg.offX}" onchange="state.cfg.offX=+this.value;render();saveState()"><input class="form-control" type="number" placeholder="Y" value="${state.cfg.offY}" onchange="state.cfg.offY=+this.value;render();saveState()"></div></div>`;
                 return;
             }
             if(item.type!=='table') {
                 p.innerHTML=`
-                <div class="form-group"><label class="form-label">內容</label><input class="form-control" value="${item.txt}" oninput="upd('${item.id}','txt',this.value)"></div>
-                <div class="form-group"><label class="form-label">字體</label><input type="number" class="form-control" value="${item.fs}" oninput="upd('${item.id}','fs',+this.value)"></div>
-                <div class="form-group"><label class="form-label">文字顏色</label><input type="color" class="form-control" value="${item.color}" oninput="upd('${item.id}','color',this.value)"></div>
-                <div class="form-group"><label class="form-label">背景色</label><input type="color" class="form-control" value="${item.bg==='transparent'?'#ffffff':item.bg}" oninput="upd('${item.id}','bg',this.value)"></div>
-                <div class="form-group"><label class="form-label">對齊</label><select class="form-control" onchange="upd('${item.id}','align',this.value)"><option value="left" ${item.align=='left'?'selected':''}>左</option><option value="center" ${item.align=='center'?'selected':''}>中</option><option value="right" ${item.align=='right'?'selected':''}>右</option></select></div>
-                <div class="form-group"><label class="form-label">X / Y</label><div style="display:flex;gap:5px"><input type="number" class="form-control" value="${item.x}" onchange="upd('${item.id}','x',+this.value)"><input type="number" class="form-control" value="${item.y}" onchange="upd('${item.id}','y',+this.value)"></div></div>
-                <div class="form-group"><label class="form-label">寬 / 高</label><div style="display:flex;gap:5px"><input type="number" class="form-control" value="${item.w}" onchange="upd('${item.id}','w',+this.value)"><input type="number" class="form-control" value="${item.h}" onchange="upd('${item.id}','h',+this.value)"></div></div>
+                <div class="form-group"><label class="form-label">文字內容</label><textarea rows="3" class="form-control" oninput="upd('${item.id}','txt',this.value)">${item.txt}</textarea></div>
+                <div class="form-group"><label class="form-label">字體大小</label><input type="number" class="form-control" value="${item.fs}" oninput="upd('${item.id}','fs',+this.value)"></div>
+                <div style="display:flex;gap:5px" class="form-group">
+                    <div style="flex:1"><label class="form-label">文字色</label><input type="color" class="form-control" style="height:30px" value="${item.color}" oninput="upd('${item.id}','color',this.value)"></div>
+                    <div style="flex:1"><label class="form-label">背景色</label><input type="color" class="form-control" style="height:30px" value="${item.bg==='transparent'?'#ffffff':item.bg}" oninput="upd('${item.id}','bg',this.value)"></div>
+                </div>
+                <div class="form-group"><label class="form-label">邊框</label><select class="form-control" onchange="upd('${item.id}','br',this.value)"><option value="none">無</option><option value="1px solid #000000" ${item.br.includes('1px')?'selected':''}>細線</option><option value="2px solid #000000" ${item.br.includes('2px')?'selected':''}>粗線</option></select></div>
+                <div class="form-group"><label class="form-label">位置 (X, Y)</label><div style="display:flex;gap:5px"><input type="number" class="form-control" value="${item.x}" onchange="upd('${item.id}','x',+this.value)"><input type="number" class="form-control" value="${item.y}" onchange="upd('${item.id}','y',+this.value)"></div></div>
+                <div class="form-group"><label class="form-label">尺寸 (W, H)</label><div style="display:flex;gap:5px"><input type="number" class="form-control" value="${item.w}" onchange="upd('${item.id}','w',+this.value)"><input type="number" class="form-control" value="${item.h}" onchange="upd('${item.id}','h',+this.value)"></div></div>
                 `;
             } else {
-                p.innerHTML=`<div>表格設定</div>`;
+                p.innerHTML=`<div class="form-label">表格表頭高 (0=隱藏)</div><input class="form-control" type="number" value="${item.headH}" onchange="upd('${item.id}','headH',+this.value)">
+                <div class="form-label" style="margin-top:10px">欄位名稱 (拖曳寬度調整)</div>`;
                 item.cols.forEach((c,i)=> p.innerHTML+=`<div style="margin-top:5px"><input class="form-control" value="${c}" oninput="updTbl('${item.id}',${i},this.value)"></div>`);
             }
         }
@@ -389,11 +412,8 @@
 
         // --- Functions ---
         function zOrder(d) {
-            const i=state.els.findIndex(x=>x.id===state.sel);
-            if(i<0)return;
-            const el=state.els.splice(i,1)[0];
-            d===1?state.els.push(el):state.els.unshift(el);
-            render(); saveState();
+            const i=state.els.findIndex(x=>x.id===state.sel); if(i<0)return;
+            const el=state.els.splice(i,1)[0]; d===1?state.els.push(el):state.els.unshift(el); render(); saveState();
         }
         function dupEl() {
             const o=state.els.find(x=>x.id===state.sel);
@@ -404,9 +424,93 @@
         
         function addTable() {
             const n=+el('tbl-cols').value;
-            const item={ id:Math.random().toString(), type:'table', x:20, y:60, w:0, h:0, cols:Array(n).fill('').map((_,i)=>'H'+(i+1)), fields:Array(n).fill(''), colW:Array(n).fill(60), headH:30, rowH:30 };
+            const hh=+el('tbl-hh').value;
+            const item={ id:Math.random().toString(), type:'table', x:20, y:80, w:0, h:0, cols:Array(n).fill('').map((_,i)=>'H'+(i+1)), fields:Array(n).fill(''), colW:Array(n).fill(50), headH:hh, rowH:30 };
             state.els.push(item); state.cfg.mode='group'; state.sel=item.id;
             el('modal-tbl').style.display='none'; render(); saveState();
+        }
+
+        // ★★★ 魔法：公務報表產生器 ★★★
+        function genGovTable() {
+            if(!confirm('這將清空當前畫布並建立「收支概況彙總表」，確定嗎？')) return;
+            state.els = [];
+            state.cfg.orient = 'landscape';
+            state.cfg.mode = 'group';
+            state.cfg.splitY = 130; // 數據開始位置
+            updCanvasSz();
+
+            // 1. 建立標題
+            addEl('title', '〇〇基金近10年度收支概況彙總表', 350, 30, 400, 30, 20, 'bold');
+            addEl('text', '單位：新臺幣千元', 950, 60, 150, 20, 10, 'normal', 'transparent', 'none').align='right';
+
+            // 2. 畫複雜表頭 (使用矩形和文字組合，模擬合併儲存格)
+            // 第一列 (Top) Y=80, H=50 (部分高度不同)
+            // 欄位定義：X起始, 寬度
+            const cols = [
+                {t:'年度別', x:40, w:60},
+                {t:'業務總收入\n(含基金來源)', x:100, w:100},
+                {t:'業務總支出\n(含基金用途)', x:200, w:100},
+                {t:'年度賸餘\n(短絀)', x:300, w:80},
+                {t:'賸餘\n繳庫數', x:380, w:60},
+                {t:'購建固定資產', x:440, w:100},
+                // 合併欄位：國庫增撥
+                {t:'國 庫 增 撥', x:540, w:200, h:25, sub:[
+                    {t:'國庫增撥基金', x:540, w:100, y:105, h:25},
+                    {t:'政府補助收入', x:640, w:100, y:105, h:25}
+                ]},
+                // 合併欄位：資產
+                {t:'資  產', x:740, w:120, h:25, sub:[
+                     {t:'現  金', x:780, w:80, y:105, h:25} // 左邊留白
+                ]},
+                {t:'負  債', x:860, w:120, h:25, sub:[
+                     {t:'長債餘額', x:860, w:120, y:105, h:25}
+                ]},
+                 {t:'累積賸餘\n(基金餘額)', x:980, w:100}
+            ];
+
+            // 繪製表頭框線與文字
+            cols.forEach(c => {
+                if(c.sub) {
+                    // 合併的主標題
+                    addEl('text', c.t, c.x, 80, c.w, c.h, 12, 'bold', 'transparent', '1px solid #000000').align='center';
+                    // 子標題
+                    c.sub.forEach(s => {
+                         addEl('text', s.t, s.x, s.y, s.w, s.h, 12, 'bold', 'transparent', '1px solid #000000').align='center';
+                    });
+                    // 如果有留白(資產左邊)，補一個框線
+                    if(c.t === '資  產') {
+                        addEl('text', '', 740, 105, 40, 25, 12, 'normal', 'transparent', '1px solid #000000');
+                    }
+                } else {
+                    // 單一欄位 (高度 50)
+                    addEl('text', c.t, c.x, 80, c.w, 50, 12, 'bold', 'transparent', '1px solid #000000').align='center';
+                }
+            });
+
+            // 3. 建立數據表格 (隱藏表頭，只用來填數據)
+            const cw = [60, 100, 100, 80, 60, 100, 100, 100, 40, 80, 120, 100]; // 對應上面寬度
+            const tbl = {
+                id: Math.random().toString(), type: 'table', 
+                x: 40, y: 130, // 接在表頭下方
+                w: 0, h: 0,
+                cols: Array(12).fill(''), // 隱藏表頭
+                fields: Array(12).fill(''), 
+                colW: cw, 
+                headH: 0, // 重要：隱藏內建表頭
+                rowH: 30
+            };
+            state.els.push(tbl);
+            state.sel = tbl.id;
+
+            // 4. 產生範例數據
+            state.data = [];
+            for(let i=115; i>=106; i--) {
+                state.data.push({'C1':i, 'C2':'', 'C3':'', 'C4':''}); // 示意
+            }
+            state.fields = ['C1','C2','C3']; // 簡單示意
+
+            render(); saveState();
+            alert('報表結構已建立！請在下方表格拖曳欄位進行綁定。');
         }
 
         // --- PDF BG ---
@@ -427,9 +531,9 @@
             el('canvas').style.backgroundImage=`${ov}, url(${state.bgUrl})`;
             el('canvas').style.backgroundSize='100% 100%';
         }
-        function clrBg() { state.bgUrl=null; el('canvas').style.backgroundImage='linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px)'; el('canvas').style.backgroundSize='20px 20px'; el('bg-ctrl').style.display='none'; el('f-pdf').value=''; }
+        function clrBg() { state.bgUrl=null; el('canvas').style.backgroundImage='linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)'; el('canvas').style.backgroundSize='20px 20px'; el('bg-ctrl').style.display='none'; el('f-pdf').value=''; }
 
-        // --- Data & File ---
+        // --- Data ---
         function loadData(i) {
             const f=i.files[0], r=new FileReader();
             r.onload=e=>{
@@ -442,7 +546,7 @@
         function renderFields() {
             const d=el('field-list'); d.innerHTML='';
             state.fields.forEach(f=>{
-                const b=document.createElement('div'); b.innerText=f; b.style.cssText='padding:5px;border:1px solid #ccc;cursor:grab;background:#fff;border-radius:4px;font-size:12px'; b.draggable=true;
+                const b=document.createElement('div'); b.innerText=f; b.style.cssText='padding:4px 8px;border:1px solid #cbd5e1;cursor:grab;background:white;border-radius:4px;font-size:12px;color:#334155'; b.draggable=true;
                 b.ondragstart=e=>{e.dataTransfer.setData('type','field');e.dataTransfer.setData('f',f);};
                 d.appendChild(b);
             });
@@ -456,10 +560,10 @@
             }
         };
 
-        // --- Save/Load Project ---
+        // --- Save/Load ---
         function saveProject() {
-            const b=new Blob([JSON.stringify({v:'9.2', ...state})],{type:'application/json'});
-            const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`project-${Date.now()}.prs`; a.click();
+            const b=new Blob([JSON.stringify({v:'9.3', ...state})],{type:'application/json'});
+            const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`report-${Date.now()}.prs`; a.click();
         }
         function loadProject() { el('f-proj').click(); }
         function readProject(i) {
@@ -475,25 +579,18 @@
             if(!confirm('覆蓋？')) return; state.els=[];
             if(t==='invoice') {
                 state.cfg.mode='group'; state.cfg.splitY=160;
-                addEl('text','',20,110,700,0,12,'normal','transparent','2px solid #000000');
+                addEl('text','',20,110,700,2,12,'normal','transparent','2px solid #000000');
                 addEl('title','電子發票',250,40,300,30,24,'bold');
                 addEl('text','日期: 2025-01-01',500,80,200,20);
                 const tb={id:'t1',type:'table',x:40,y:170,cols:['品名','數量','單價','金額'],fields:['品名','數量','單價','金額'],colW:[250,80,100,100],headH:30,rowH:30};
                 state.els.push(tb); state.data=[{品名:'A',數量:'1',單價:'10',金額:'10'},{品名:'B',數量:'2',單價:'20',金額:'40'}];
             } else if(t==='label') {
-                state.cfg.mode='grid'; state.cfg.gC=2; state.cfg.gR=4;
+                state.cfg.mode='single'; state.cfg.size='a4';
                 addEl('text','',10,10,300,180,12,'normal','transparent','2px solid #000000');
                 addEl('field','品名',50,50,200,30,20,'bold');
-                state.data=[{品名:'商品A'},{品名:'商品B'}];
-            } else if(t==='ship') {
-                state.cfg.mode='group'; state.cfg.splitY=140;
-                addEl('title','出貨單',20,20,200,40);
-                addEl('field','客戶',20,80,200,20);
-                state.els.push({id:'t2',type:'table',x:20,y:150,cols:['品名','數量'],fields:['品名','數量'],colW:[200,80],headH:30,rowH:30});
-                state.data=[{客戶:'C1',品名:'P1',數量:'1'}];
+                state.data=[{品名:'商品A'}];
             }
             state.fields=Object.keys(state.data[0]); renderFields(); render(); saveState();
-            swTab(document.querySelector('.tab-btn:nth-child(2)'),'t2');
         }
 
         // --- Print ---
@@ -502,7 +599,6 @@
             const css=document.createElement('style');
             css.innerHTML=`@media print{@page{margin:0} body{visibility:hidden} #print-container{visibility:visible;position:absolute;left:0;top:0} .p-pg{page-break-after:always;position:relative;height:${state.cfg.h}mm;width:${state.cfg.w}mm;overflow:hidden} .p-el{position:absolute;display:flex;align-items:center;overflow:hidden}}`;
             c.appendChild(css);
-
             const dt = state.data.length ? state.data : [{}];
             
             if(state.cfg.mode === 'single') {
@@ -511,37 +607,18 @@
                     state.els.forEach(e => pg.appendChild(mkEl(e, d)));
                     c.appendChild(pg);
                 });
-            } else if(state.cfg.mode === 'grid') {
-                const {gC,gR,gX,gY} = state.cfg;
-                let pg = document.createElement('div'); pg.className='p-pg';
-                let idx = 0;
-                let maxW=0, maxH=0; state.els.forEach(e=>{maxW=Math.max(maxW,e.x+e.w); maxH=Math.max(maxH,e.y+e.h);});
-                
-                dt.forEach(d => {
-                    if(idx >= gC*gR) { c.appendChild(pg); pg=document.createElement('div'); pg.className='p-pg'; idx=0; }
-                    const col=idx%gC, row=Math.floor(idx/gC);
-                    const ox = col*(maxW+gX)+20, oy = row*(maxH+gY)+20;
-                    state.els.forEach(e => {
-                        const el = mkEl(e, d);
-                        el.style.left = (e.x+ox+state.cfg.offX)+'px';
-                        el.style.top = (e.y+oy+state.cfg.offY)+'px';
-                        pg.appendChild(el);
-                    });
-                    idx++;
-                });
-                c.appendChild(pg);
-            } else {
+            } else { // Group
                 const pg = document.createElement('div'); pg.className = 'p-pg';
                 state.els.filter(e=>e.y<state.cfg.splitY).forEach(e=>pg.appendChild(mkEl(e, dt[0])));
-                
                 let cy = state.cfg.splitY;
                 const tbl = state.els.find(e=>e.type==='table');
                 
                 if(tbl) {
-                    const th = mkTbl(tbl, null, true);
-                    th.style.top=cy+'px'; th.style.left=(tbl.x+state.cfg.offX)+'px';
-                    pg.appendChild(th); cy+=tbl.headH;
-                    
+                    if(tbl.headH > 0) {
+                        const th = mkTbl(tbl, null, true);
+                        th.style.top=cy+'px'; th.style.left=(tbl.x+state.cfg.offX)+'px';
+                        pg.appendChild(th); cy+=tbl.headH;
+                    }
                     dt.forEach(d => {
                         const tr = mkTbl(tbl, d, false);
                         tr.style.top=cy+'px'; tr.style.left=(tbl.x+state.cfg.offX)+'px';
@@ -552,9 +629,11 @@
                             const nPg = document.createElement('div'); nPg.className='p-pg';
                             state.els.filter(e=>e.y<state.cfg.splitY).forEach(e=>nPg.appendChild(mkEl(e, dt[0])));
                             cy = state.cfg.splitY;
-                            const nth = mkTbl(tbl, null, true);
-                            nth.style.top=cy+'px'; nth.style.left=(tbl.x+state.cfg.offX)+'px';
-                            nPg.appendChild(nth); cy+=tbl.headH;
+                            if(tbl.headH > 0) {
+                                const nth = mkTbl(tbl, null, true);
+                                nth.style.top=cy+'px'; nth.style.left=(tbl.x+state.cfg.offX)+'px';
+                                nPg.appendChild(nth); cy+=tbl.headH;
+                            }
                             pg=nPg; 
                         }
                     });
@@ -571,14 +650,9 @@
             d.style.fontSize=item.fs+'px'; d.style.fontWeight=item.fw;
             d.style.background=item.bg; d.style.border=item.br; d.style.color=item.color;
             d.style.justifyContent = item.align==='center'?'center':(item.align==='right'?'flex-end':'flex-start');
-            if(item.type==='qrcode') {
-                 d.innerHTML=`<img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${data[item.txt]||'TEST'}" style="width:100%;height:100%">`;
-            } else if(item.type!=='table') {
-                d.innerText = item.type==='field' ? (data[item.txt]||'') : item.txt;
-            }
+            if(item.type!=='table') d.innerText = item.type==='field' ? (data[item.txt]||'') : item.txt;
             return d;
         }
-
         function mkTbl(item, data, isH) {
             const r=document.createElement('div'); r.className='p-el';
             r.style.width=item.colW.reduce((a,b)=>a+b,0)+'px';
@@ -587,6 +661,7 @@
                 const cell=document.createElement('div');
                 cell.style.width=item.colW[i]+'px'; cell.style.height='100%';
                 cell.style.border='1px solid #000'; cell.style.fontSize='12px'; cell.style.padding='2px';
+                cell.style.display='flex'; cell.style.alignItems='center'; cell.style.justifyContent='center';
                 cell.innerText=isH?c:(data[item.fields[i]]||'');
                 r.appendChild(cell);
             });
