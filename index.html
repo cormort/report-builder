@@ -1,672 +1,360 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Report Studio v9.3 - 公務報表專用版</title>
+    <meta name="description" content="Pro Report Studio v10.0 - 專業公務報表設計工具，支援 Excel/JSON 匯入、公式計算、PDF 直接下載">
+    <meta name="keywords" content="報表設計, 公務報表, PDF, Excel, 列印">
+    <meta name="author" content="Pro Report Studio">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Pro Report Studio v10.0 - 公務報表專用版">
+    <meta property="og:description" content="專業報表設計工具，支援 Excel/JSON 匯入與 PDF 直接下載">
+    <meta property="og:type" content="website">
+
+    <title>Pro Report Studio v10.0 - 公務報表專用版</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Material+Symbols+Outlined"
+        rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+
     <!-- PDF.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Material+Symbols+Outlined" rel="stylesheet">
-    <style>
-        :root { --primary: #00897b; /* 改為公務綠 */ --bg: #f8fafc; --surface: #ffffff; --border: #cbd5e1; --text: #334155; --guide: #0ea5e9; }
-        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
-        body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; user-select: none; }
-        
-        /* Header */
-        .header { height: 60px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; justify-content: space-between; z-index: 200; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; color: var(--primary); }
-        .toolbar { display: flex; gap: 8px; }
 
-        /* Layout */
-        .main-layout { flex: 1; display: flex; overflow: hidden; }
-        .left-panel, .right-panel { width: 320px; background: #f1f5f9; display: flex; flex-direction: column; z-index: 100; border-color: var(--border); }
-        .left-panel { border-right: 1px solid var(--border); }
-        .right-panel { border-left: 1px solid var(--border); background: white; }
+    <!-- SheetJS (Excel 解析) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous"></script>
 
-        /* Tabs */
-        .tab-nav { display: flex; background: white; border-bottom: 1px solid var(--border); }
-        .tab-btn { flex: 1; padding: 12px 0; text-align: center; cursor: pointer; color: #64748b; font-size: 13px; font-weight: 500; border-bottom: 2px solid transparent; }
-        .tab-btn.active { color: var(--primary); background: rgba(0,137,123,0.05); border-bottom-color: var(--primary); }
-        .tab-content { flex: 1; overflow-y: auto; padding: 16px; display: none; }
-        .tab-content.active { display: block; }
-
-        /* Components */
-        .btn { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 13px; background: white; color: var(--text); display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition:0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .btn:hover { background: #f8fafc; border-color: var(--primary); color: var(--primary); }
-        .btn-primary { background: var(--primary); color: white; border: none; }
-        .btn-primary:hover { background: #00796b; color: white; }
-        .btn-danger { background: #ef4444; color: white; border: none; }
-        .btn-danger:hover { background: #dc2626; color: white; }
-        .btn-block { width: 100%; }
-        .form-group { margin-bottom: 12px; }
-        .form-label { font-size: 12px; color: #64748b; margin-bottom: 4px; display: block; }
-        .form-control { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: white; color: var(--text); font-size: 13px; }
-
-        /* Canvas */
-        .center-panel { flex: 1; background: #cbd5e1; display: flex; justify-content: center; overflow: auto; padding: 40px; position: relative; }
-        .canvas { background-color: white; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.2); transform-origin: top center; }
-        /* 格線背景 */
-        .canvas-grid { background-image: linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px); background-size: 20px 20px; }
-        
-        .canvas-element { 
-            position: absolute; cursor: move; display: flex; align-items: center; box-sizing: border-box; overflow: hidden; 
-            -webkit-print-color-adjust: exact; print-color-adjust: exact;
-        }
-        .canvas-element:hover { outline: 1px dashed var(--primary); }
-        .canvas-element.selected { outline: 2px solid var(--primary); z-index: 1000 !important; }
-        .canvas-element-value { width: 100%; pointer-events: none; overflow: hidden; white-space: pre-wrap; word-break: break-all; }
-
-        .resize-handle { position: absolute; width: 10px; height: 10px; background: white; border: 2px solid var(--primary); border-radius: 50%; display: none; }
-        .selected .resize-handle { display: block; }
-        .rh-se { bottom: -5px; right: -5px; cursor: se-resize; }
-
-        /* Guides */
-        .guide-line { position: absolute; background: var(--guide); pointer-events: none; z-index: 9999; display: none; }
-        .guide-x { width: 100%; height: 1px; border-top: 1px dashed var(--guide); }
-        .guide-y { height: 100%; width: 1px; border-left: 1px dashed var(--guide); }
-        
-        .floating-toolbar { position: absolute; background: white; border: 1px solid var(--border); border-radius: 6px; padding: 4px; display: none; gap: 4px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-        .floating-toolbar.show { display: flex; }
-
-        .table-element { display: block !important; border: none !important; }
-        .drop-zone { transition: 0.2s; }
-        #splitLine { position: absolute; left: 0; width: 100%; border-top: 2px dashed #ef4444; z-index: 9000; display: none; cursor: ns-resize; }
-        #splitLine::after { content: "資料起始線 (由此重複)"; position: absolute; right: 0; top: -20px; background: #ef4444; color: white; padding: 2px 6px; font-size: 11px; border-radius: 3px; }
-        
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
-        .modal { background: white; padding: 24px; border-radius: 12px; width: 320px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
-
-        #print-container { display: none; }
-        @media print {
-            @page { margin: 0; }
-            body * { visibility: hidden; }
-            #print-container { display: block !important; position: absolute; left: 0; top: 0; width: 100%; visibility: visible; }
-            #print-container * { visibility: visible; }
-            .print-page { page-break-after: always; position: relative; overflow: hidden; background: white; }
-            .print-element { position: absolute; display: flex; align-items: center; }
-        }
-    </style>
+    <!-- jsPDF + html2canvas (PDF 直接下載) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+        crossorigin="anonymous"></script>
 </head>
+
 <body>
-    <div class="header">
-        <div class="title"><span class="material-symbols-outlined">description</span> Pro Report v9.3 公務版</div>
-        <div class="toolbar">
+    <!-- Header -->
+    <header class="header">
+        <div class="title">
+            <span class="material-symbols-outlined">description</span>
+            Pro Report v10.0 公務版
+        </div>
+        <nav class="toolbar">
             <button class="btn" onclick="undo()" title="Ctrl+Z">↩ 復原</button>
             <button class="btn" onclick="saveProject()">💾 存檔</button>
             <button class="btn" onclick="loadProject()">📂 讀檔</button>
-            <input type="file" id="f-proj" hidden accept=".prs" onchange="readProject(this)">
-            <div style="width:1px;background:var(--border);height:20px;margin:0 5px"></div>
-            <button class="btn btn-primary" onclick="printDoc()">🖨 列印 / PDF</button>
-        </div>
-    </div>
+            <input type="file" id="f-proj" class="hidden-input" accept=".prs">
+            <div class="toolbar-divider"></div>
+            <button class="btn" onclick="openModal('modal-templates')" title="範本庫">📁 範本庫</button>
+            <div class="toolbar-divider"></div>
+            <button class="btn" onclick="openModal('modal-preview')" title="預覽">👁 預覽</button>
+            <button class="btn btn-primary" onclick="printDoc()">🖨 列印</button>
+            <button class="btn btn-primary" onclick="downloadPdf()">📥 下載 PDF</button>
+        </nav>
+    </header>
 
-    <div class="main-layout">
-        <div class="left-panel">
-            <div class="tab-nav">
-                <div class="tab-btn active" onclick="swTab(this, 't1')">元件工具</div>
-                <div class="tab-btn" onclick="swTab(this, 't2')">資料/底圖</div>
-                <div class="tab-btn" onclick="swTab(this, 't3')">快速範本</div>
-            </div>
-            
-            <div id="t1" class="tab-content active">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:15px">
-                    <button class="btn" onclick="addEl('text','文字')"><span class="material-symbols-outlined">text_fields</span> 文字</button>
-                    <button class="btn" onclick="addEl('title','標題',null,null,300,40,24,'bold')"><span class="material-symbols-outlined">title</span> 標題</button>
-                    <button class="btn" onclick="addEl('text','',50,50,100,100,12,'normal','transparent','2px solid #000000')"><span class="material-symbols-outlined">check_box_outline_blank</span> 矩形</button>
-                    <button class="btn" onclick="addEl('text','',50,50,200,0,12,'normal','transparent','1px solid #000000')"><span class="material-symbols-outlined">horizontal_rule</span> 橫線</button>
-                    <button class="btn" onclick="addEl('text','',50,50,0,200,12,'normal','transparent','1px solid #000000')"><span class="material-symbols-outlined">vertical_shades</span> 直線</button>
+    <!-- Main Layout -->
+    <main class="main-layout">
+        <!-- Left Panel: Tools -->
+        <aside class="left-panel" id="left-panel">
+            <button class="panel-toggle panel-toggle-left" id="toggle-left" onclick="togglePanel('left')"
+                title="收合/展開左側面板">
+                <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+            <div class="panel-content" id="left-panel-content">
+                <div class="tab-nav">
+                    <button class="tab-btn active" data-tab="t1">元件工具</button>
+                    <button class="tab-btn" data-tab="t2">資料/底圖</button>
+                    <button class="tab-btn" data-tab="t3">快速範本</button>
                 </div>
-                <button class="btn btn-block" onclick="el('modal-tbl').style.display='flex'"><span class="material-symbols-outlined">table_chart</span> 插入標準表格</button>
-                <div style="font-size:11px;color:#666;margin-top:5px;text-align:center">表格可用於處理大量數據行</div>
-            </div>
-            
-            <div id="t2" class="tab-content">
-                <div style="border-bottom:1px solid var(--border);padding-bottom:15px;margin-bottom:15px">
-                    <label class="form-label" style="color:var(--primary);font-weight:bold">📄 PDF 底圖 (描圖用)</label>
-                    <button class="btn btn-block" onclick="el('f-pdf').click()"><span class="material-symbols-outlined">upload_file</span> 上傳 PDF 範本</button>
-                    <input type="file" id="f-pdf" hidden accept=".pdf" onchange="loadPdfBg(this)">
-                    <div id="bg-ctrl" style="display:none;margin-top:10px">
-                        <label class="form-label">底圖透明度</label>
-                        <input type="range" min="0" max="100" value="0" class="form-control" oninput="updBgOp(this.value)">
-                        <button class="btn btn-danger btn-block btn-sm" style="margin-top:5px" onclick="clrBg()">清除底圖</button>
+
+                <!-- Tab 1: Components -->
+                <section id="t1" class="tab-content active">
+                    <div class="btn-grid">
+                        <button class="btn" onclick="addEl('text','文字')">
+                            <span class="material-symbols-outlined">text_fields</span> 文字
+                        </button>
+                        <button class="btn" onclick="addEl('title','標題',null,null,300,40,24,'bold')">
+                            <span class="material-symbols-outlined">title</span> 標題
+                        </button>
+                        <button class="btn"
+                            onclick="addEl('text','',50,50,100,100,12,'normal','transparent','2px solid #000000')">
+                            <span class="material-symbols-outlined">check_box_outline_blank</span> 矩形
+                        </button>
+                        <button class="btn"
+                            onclick="addEl('text','',50,50,200,0,12,'normal','transparent','1px solid #000000')">
+                            <span class="material-symbols-outlined">horizontal_rule</span> 橫線
+                        </button>
+                        <button class="btn"
+                            onclick="addEl('text','',50,50,0,200,12,'normal','transparent','1px solid #000000')">
+                            <span class="material-symbols-outlined">vertical_shades</span> 直線
+                        </button>
+                        <button class="btn"
+                            onclick="addEl('formula','=SUM()',50,50,120,30,12,'normal','#fffde7','1px solid #fbc02d')">
+                            <span class="material-symbols-outlined">functions</span> 公式
+                        </button>
                     </div>
-                </div>
-                <label class="form-label" style="color:var(--primary);font-weight:bold">📊 匯入資料</label>
-                <button class="btn btn-block" onclick="el('f-csv').click()">匯入 CSV / Excel(CSV)</button>
-                <input type="file" id="f-csv" hidden onchange="loadData(this)">
-                <div id="field-list" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:5px"></div>
-            </div>
-            
-            <div id="t3" class="tab-content">
-                <div style="background:#e0f2f1;padding:10px;border-radius:6px;margin-bottom:15px;border:1px solid #00897b;">
-                    <strong style="color:#00695c;display:block;margin-bottom:5px">🚀 您的需求：</strong>
-                    <button class="btn btn-primary btn-block" style="text-align:left;font-weight:bold" onclick="genGovTable()">
-                        <span class="material-symbols-outlined">playlist_add</span> 建立「收支概況彙總表」
+                    <button class="btn btn-block" onclick="openModal('modal-tbl')">
+                        <span class="material-symbols-outlined">table_chart</span> 插入標準表格
                     </button>
-                    <div style="font-size:11px;color:#00695c;margin-top:5px">自動生成：複雜表頭、合併欄位線條、數據表格</div>
-                </div>
-                
-                <hr style="margin:15px 0;border:0;border-top:1px solid #eee">
-                <div style="font-weight:bold;margin-bottom:10px">其他範例</div>
-                <button class="btn btn-block" style="margin-bottom:8px" onclick="loadDemo('invoice')">🧾 發票範例</button>
-                <button class="btn btn-block" onclick="loadDemo('label')">🏷️ 標籤範例</button>
-            </div>
-        </div>
+                    <p class="hint-text">表格可用於處理大量數據行</p>
 
-        <div class="center-panel" id="canvas-wrap">
+                    <hr class="section-divider">
+                    <p class="section-title">頁首/頁尾</p>
+                    <div class="btn-grid">
+                        <button class="btn" onclick="addEl('header','頁首文字',20,10,200,20,10,'normal')">
+                            <span class="material-symbols-outlined">vertical_align_top</span> 頁首
+                        </button>
+                        <button class="btn" onclick="addEl('footer','第 {{PAGE}} 頁',20,null,150,20,10,'normal')">
+                            <span class="material-symbols-outlined">vertical_align_bottom</span> 頁尾
+                        </button>
+                    </div>
+                    <p class="hint-text">支援變數：{{PAGE}}, {{TOTAL}}, {{DATE}}</p>
+
+                    <hr class="section-divider">
+                    <p class="section-title">多選工具</p>
+                    <div class="btn-grid" id="align-tools">
+                        <button class="btn" onclick="alignElements('left')" title="靠左對齊">
+                            <span class="material-symbols-outlined">align_horizontal_left</span>
+                        </button>
+                        <button class="btn" onclick="alignElements('center')" title="水平置中">
+                            <span class="material-symbols-outlined">align_horizontal_center</span>
+                        </button>
+                        <button class="btn" onclick="alignElements('right')" title="靠右對齊">
+                            <span class="material-symbols-outlined">align_horizontal_right</span>
+                        </button>
+                        <button class="btn" onclick="alignElements('top')" title="靠上對齊">
+                            <span class="material-symbols-outlined">align_vertical_top</span>
+                        </button>
+                        <button class="btn" onclick="alignElements('middle')" title="垂直置中">
+                            <span class="material-symbols-outlined">align_vertical_center</span>
+                        </button>
+                        <button class="btn" onclick="alignElements('bottom')" title="靠下對齊">
+                            <span class="material-symbols-outlined">align_vertical_bottom</span>
+                        </button>
+                    </div>
+                    <button class="btn btn-block" onclick="selectAll()" style="margin-top:8px" title="Ctrl+A / Cmd+A">
+                        <span class="material-symbols-outlined">select_all</span> 全選所有元件
+                    </button>
+                    <p class="hint-text">按住 Shift 點擊多選 / Ctrl+A 全選</p>
+                </section>
+
+                <!-- Tab 2: Data & Background -->
+                <section id="t2" class="tab-content">
+                    <div class="panel-section">
+                        <label class="form-label form-label-accent">📄 PDF 底圖 (描圖用)</label>
+                        <button class="btn btn-block" onclick="document.getElementById('f-pdf').click()">
+                            <span class="material-symbols-outlined">upload_file</span> 上傳 PDF 範本
+                        </button>
+                        <input type="file" id="f-pdf" class="hidden-input" accept=".pdf">
+                        <div id="bg-ctrl" class="bg-controls">
+                            <label class="form-label">底圖透明度</label>
+                            <input type="range" min="0" max="100" value="0" class="form-control"
+                                oninput="updBgOp(this.value)">
+                            <button class="btn btn-danger btn-block" style="margin-top:5px"
+                                onclick="clrBg()">清除底圖</button>
+                        </div>
+                    </div>
+
+                    <label class="form-label form-label-accent">📊 匯入資料</label>
+                    <div class="btn-grid">
+                        <button class="btn btn-block" onclick="document.getElementById('f-data').click()">
+                            <span class="material-symbols-outlined">upload_file</span> Excel/CSV
+                        </button>
+                        <button class="btn btn-block" onclick="openModal('modal-json')">
+                            <span class="material-symbols-outlined">data_object</span> JSON
+                        </button>
+                    </div>
+                    <input type="file" id="f-data" class="hidden-input" accept=".csv,.xlsx,.xls">
+
+                    <div id="data-info" class="data-info hidden">
+                        <div class="data-info-header">
+                            <span id="data-count">0 筆資料</span>
+                            <button class="btn btn-sm" onclick="openModal('modal-data-preview')">預覽</button>
+                            <button class="btn btn-sm btn-danger" onclick="clearData()">清除</button>
+                        </div>
+                    </div>
+
+                    <div id="field-list" class="field-list"></div>
+
+                    <hr class="section-divider">
+                    <label class="form-label form-label-accent">🎨 條件格式</label>
+                    <div class="form-group">
+                        <label class="form-label">數值欄位顏色</label>
+                        <select class="form-control" id="cond-format" onchange="setCondFormat(this.value)">
+                            <option value="none">無</option>
+                            <option value="sign">正值綠/負值紅</option>
+                            <option value="heat">熱力圖</option>
+                        </select>
+                    </div>
+
+                    <hr class="section-divider">
+                    <label class="form-label form-label-accent">🔖 浮水印</label>
+                    <div class="form-group">
+                        <input type="text" class="form-control" id="watermark-text" placeholder="例：草稿、機密">
+                    </div>
+                    <button class="btn btn-block" onclick="setWatermark()">套用浮水印</button>
+                </section>
+
+                <!-- Tab 3: Templates -->
+                <section id="t3" class="tab-content">
+                    <div class="template-card">
+                        <span class="template-card-title">🚀 您的需求：</span>
+                        <button class="btn btn-primary btn-block" style="text-align:left;font-weight:bold"
+                            onclick="genGovTable()">
+                            <span class="material-symbols-outlined">playlist_add</span> 建立「收支概況彙總表」
+                        </button>
+                        <p class="template-card-hint">自動生成：複雜表頭、合併欄位線條、數據表格</p>
+                    </div>
+
+                    <hr class="section-divider">
+                    <p class="section-title">其他範例</p>
+                    <button class="btn btn-block" style="margin-bottom:8px" onclick="loadDemo('invoice')">🧾
+                        發票範例</button>
+                    <button class="btn btn-block" onclick="loadDemo('label')">🏷️ 標籤範例</button>
+
+                    <hr class="section-divider">
+                    <p class="section-title">分組與小計</p>
+                    <div class="form-group">
+                        <label class="form-label">分組欄位</label>
+                        <select class="form-control" id="group-field">
+                            <option value="">-- 選擇欄位 --</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-block" onclick="enableGrouping()">啟用分組小計</button>
+                </section>
+            </div>
+        </aside>
+
+        <!-- Center: Canvas -->
+        <section class="center-panel" id="canvas-wrap">
             <div class="canvas canvas-grid" id="canvas">
                 <div id="splitLine"></div>
                 <div id="guideX" class="guide-line guide-x"></div>
                 <div id="guideY" class="guide-line guide-y"></div>
+                <div id="watermark" class="watermark"></div>
             </div>
             <div class="floating-toolbar" id="floatBar">
-                <button class="btn btn-sm" onclick="dupEl()" title="複製"><span class="material-symbols-outlined">content_copy</span></button>
-                <button class="btn btn-sm" onclick="zOrder(1)" title="移至最上層"><span class="material-symbols-outlined">flip_to_front</span></button>
-                <button class="btn btn-sm" onclick="zOrder(-1)" title="移至最下層"><span class="material-symbols-outlined">flip_to_back</span></button>
-                <button class="btn btn-sm btn-danger" onclick="delEl()" title="刪除"><span class="material-symbols-outlined">delete</span></button>
+                <button class="btn" onclick="dupEl()" title="複製">
+                    <span class="material-symbols-outlined">content_copy</span>
+                </button>
+                <button class="btn" onclick="zOrder(1)" title="移至最上層">
+                    <span class="material-symbols-outlined">flip_to_front</span>
+                </button>
+                <button class="btn" onclick="zOrder(-1)" title="移至最下層">
+                    <span class="material-symbols-outlined">flip_to_back</span>
+                </button>
+                <button class="btn" onclick="toggleLock()" title="鎖定/解鎖" id="btn-lock">
+                    <span class="material-symbols-outlined">lock_open</span>
+                </button>
+                <button class="btn btn-danger" onclick="delEl()" title="刪除">
+                    <span class="material-symbols-outlined">delete</span>
+                </button>
             </div>
-        </div>
+            <div class="selection-box" id="selectionBox"></div>
+        </section>
 
-        <div class="right-panel">
-            <div style="padding:15px;border-bottom:1px solid var(--border);font-weight:bold;color:var(--text)">屬性設定</div>
-            <div id="props" style="padding:15px"></div>
-        </div>
-    </div>
+        <!-- Right Panel: Properties -->
+        <aside class="right-panel" id="right-panel">
+            <button class="panel-toggle panel-toggle-right" id="toggle-right" onclick="togglePanel('right')"
+                title="收合/展開右側面板">
+                <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+            <div class="panel-content" id="right-panel-content">
+                <div class="panel-header">屬性設定</div>
+                <div id="props" style="padding:15px"></div>
+            </div>
+        </aside>
+    </main>
 
-    <!-- Modals -->
+    <!-- Modal: Insert Table -->
     <div class="modal-overlay" id="modal-tbl">
         <div class="modal">
-            <h3 style="margin-bottom:15px">插入標準表格</h3>
-            <div class="form-group"><label class="form-label">欄位數量</label><input type="number" id="tbl-cols" value="5" class="form-control"></div>
-            <div class="form-group"><label class="form-label">表頭高度 (0=隱藏)</label><input type="number" id="tbl-hh" value="30" class="form-control"></div>
-            <div style="display:flex;gap:10px;margin-top:20px">
-                <button class="btn btn-block" onclick="el('modal-tbl').style.display='none'">取消</button>
+            <h3>插入標準表格</h3>
+            <div class="form-group">
+                <label class="form-label">欄位數量</label>
+                <input type="number" id="tbl-cols" value="5" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">表頭高度 (0=隱藏)</label>
+                <input type="number" id="tbl-hh" value="30" class="form-control">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-block" onclick="closeModal('modal-tbl')">取消</button>
                 <button class="btn btn-primary btn-block" onclick="addTable()">插入</button>
             </div>
         </div>
     </div>
-    
+
+    <!-- Modal: JSON Import -->
+    <div class="modal-overlay" id="modal-json">
+        <div class="modal modal-lg">
+            <h3>匯入 JSON 資料</h3>
+            <div class="form-group">
+                <label class="form-label">貼上 JSON 陣列 (例：[{"name":"A"},{"name":"B"}])</label>
+                <textarea id="json-input" class="form-control" rows="8"
+                    placeholder='[{"欄位1":"值1","欄位2":"值2"}]'></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-block" onclick="closeModal('modal-json')">取消</button>
+                <button class="btn btn-primary btn-block" onclick="importJson()">匯入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Data Preview -->
+    <div class="modal-overlay" id="modal-data-preview">
+        <div class="modal modal-xl">
+            <h3>資料預覽 <span id="preview-count"></span></h3>
+            <div class="data-preview-table" id="data-preview-content"></div>
+            <div class="modal-actions">
+                <button class="btn btn-block" onclick="closeModal('modal-data-preview')">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Template Library -->
+    <div class="modal-overlay" id="modal-templates">
+        <div class="modal modal-lg">
+            <h3>範本庫</h3>
+            <div id="template-list" class="template-list">
+                <p class="hint-text">尚無儲存的範本</p>
+            </div>
+            <hr class="section-divider">
+            <div class="form-group">
+                <label class="form-label">儲存為新範本</label>
+                <input type="text" id="template-name" class="form-control" placeholder="範本名稱">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-block" onclick="closeModal('modal-templates')">關閉</button>
+                <button class="btn btn-primary btn-block" onclick="saveTemplate()">儲存範本</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Print Preview -->
+    <div class="modal-overlay" id="modal-preview">
+        <div class="modal modal-xl">
+            <h3>分頁預覽</h3>
+            <div id="preview-pages" class="preview-pages"></div>
+            <div class="modal-actions">
+                <button class="btn btn-block" onclick="closeModal('modal-preview')">關閉</button>
+                <button class="btn btn-block" onclick="printDoc()">🖨 列印</button>
+                <button class="btn btn-primary btn-block" onclick="downloadPdf()">📥 下載 PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Container -->
     <div id="print-container"></div>
 
-    <script>
-        const el = id => document.getElementById(id);
-        const state = { 
-            els: [], data: [], fields: [], sel: null, 
-            cfg: { size: 'a4', orient: 'landscape', w: 297, h: 210, mode: 'single', splitY: 150, offX:0, offY:0, gC:2, gR:4, gX:5, gY:5 },
-            bgUrl: null 
-        };
-        const history = [];
-
-        window.onload = () => {
-            initCanvas();
-            renderProps();
-            saveState();
-            
-            document.addEventListener('keydown', e => {
-                if((e.ctrlKey||e.metaKey)&&e.key==='z') { e.preventDefault(); undo(); }
-                if(e.key==='Delete'&&state.sel) delEl();
-                if(state.sel && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
-                    e.preventDefault();
-                    const i = state.els.find(x=>x.id===state.sel);
-                    if(i) {
-                        const d = e.shiftKey?10:1;
-                        if(e.key.includes('Left')) i.x-=d; if(e.key.includes('Right')) i.x+=d;
-                        if(e.key.includes('Up')) i.y-=d; if(e.key.includes('Down')) i.y+=d;
-                        render(); renderProps(i);
-                    }
-                }
-            });
-        };
-
-        function initCanvas() {
-            updCanvasSz();
-            el('canvas-wrap').onmousedown = e => {
-                if(e.target.id==='canvas-wrap'||e.target.id==='canvas') { state.sel=null; render(); }
-            };
-            const spl = el('splitLine');
-            spl.onmousedown = e => {
-                e.preventDefault(); const sy=e.clientY, st=state.cfg.splitY;
-                const mv=ev=>{ state.cfg.splitY=Math.max(0,st+(ev.clientY-sy)); spl.style.top=state.cfg.splitY+'px'; };
-                const up=()=>{ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); };
-                document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
-            };
-        }
-        function updCanvasSz() {
-            const m = {'a4':[210,297], 'a5':[148,210], 'receipt80':[80,297]};
-            let [w,h] = m[state.cfg.size] || [state.cfg.w, state.cfg.h];
-            if(state.cfg.orient==='landscape' && state.cfg.size!=='receipt80') [w,h]=[h,w];
-            state.cfg.w=w; state.cfg.h=h;
-            el('canvas').style.width=w+'mm'; el('canvas').style.height=(state.cfg.size==='receipt80'?'auto':h+'mm');
-            el('canvas').style.minHeight=(state.cfg.size==='receipt80'?'150mm':'0');
-        }
-
-        // --- History ---
-        function saveState() {
-            if(history.length>20) history.shift();
-            history.push(JSON.stringify({els:state.els, cfg:state.cfg}));
-        }
-        function undo() {
-            if(history.length>1) {
-                history.pop(); const p=JSON.parse(history[history.length-1]);
-                state.els=p.els; state.cfg=p.cfg; state.sel=null;
-                render(); renderProps(); updCanvasSz();
-            }
-        }
-
-        // --- Core Logic ---
-        function addEl(type, txt, x=20, y=20, w=100, h=30, fs=12, fw='normal', bg='transparent', br='none') {
-            const id = Math.random().toString(36).substr(2,9);
-            const item = { id, type, txt, x, y, w, h, fs, fw, bg, br, color:'#000000', align:'center' };
-            if(type==='field') item.field=txt;
-            state.els.push(item); state.sel=id; render(); saveState();
-            return item;
-        }
-
-        // ★★★ 核心渲染：嚴格順序 ★★★
-        function render() {
-            const c = el('canvas');
-            const spl = el('splitLine');
-            const gx = el('guideX'), gy = el('guideY');
-            c.innerHTML=''; c.appendChild(spl); c.appendChild(gx); c.appendChild(gy);
-            
-            spl.style.display = state.cfg.mode==='group'?'block':'none';
-            spl.style.top = state.cfg.splitY+'px';
-
-            state.els.forEach((item, idx) => {
-                if(item.type==='table') renderTable(item, idx);
-                else renderItem(item, idx);
-            });
-
-            const bar = el('floatBar');
-            if(state.sel) {
-                const s = state.els.find(x=>x.id===state.sel);
-                if(s) {
-                    bar.style.display='flex';
-                    bar.style.top = (s.y + state.cfg.offY - 50) + 'px';
-                    bar.style.left = (s.x + state.cfg.offX) + 'px';
-                    renderProps(s); return;
-                }
-            }
-            bar.style.display='none'; renderProps(null);
-        }
-
-        function renderItem(item, idx) {
-            const d = document.createElement('div');
-            d.className = 'canvas-element ' + (state.sel===item.id?'selected':'');
-            d.style.left = (item.x+state.cfg.offX)+'px'; d.style.top = (item.y+state.cfg.offY)+'px';
-            d.style.width = item.w+'px'; d.style.height = item.h+'px';
-            d.style.zIndex = idx+1; 
-            d.style.background = item.bg; d.style.border = item.br;
-            if(item.br==='none' && state.sel===item.id) d.style.border='1px dashed #ccc';
-            
-            d.style.color = item.color; d.style.fontSize = item.fs+'px'; d.style.fontWeight = item.fw;
-            const txt = item.type==='field' ? `[${item.txt}]` : item.txt;
-            // 垂直置中
-            d.style.display = 'flex'; d.style.alignItems = 'center'; d.style.justifyContent = item.align==='center'?'center':(item.align==='right'?'flex-end':'flex-start');
-            d.innerHTML = `<div class="canvas-element-value" style="text-align:${item.align}">${txt}</div>`;
-            
-            if(state.sel===item.id) {
-                const rh = document.createElement('div'); rh.className='resize-handle rh-se';
-                rh.onmousedown = e => { e.stopPropagation(); drag(e, item, 'resize'); };
-                d.appendChild(rh);
-            }
-            d.onmousedown = e => { e.stopPropagation(); state.sel=item.id; render(); drag(e, item, 'move'); };
-            el('canvas').appendChild(d);
-        }
-
-        function renderTable(item, idx) {
-            const tw = item.colW.reduce((a,b)=>a+b,0);
-            const th = item.headH + item.rowH;
-            const d = document.createElement('div');
-            d.className = 'canvas-element table-element ' + (state.sel===item.id?'selected':'');
-            d.style.left=(item.x+state.cfg.offX)+'px'; d.style.top=(item.y+state.cfg.offY)+'px';
-            d.style.width=tw+'px'; d.style.height=th+'px'; d.style.zIndex=idx+1;
-
-            let h = '';
-            if(item.headH > 0) {
-                h += `<div style="display:flex;height:${item.headH}px">`;
-                item.cols.forEach((c,i)=> h+=`<div style="width:${item.colW[i]}px;border:1px solid #000;background:#f8fafc;padding:4px;font-size:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;text-align:center">${c}</div>`);
-                h += `</div>`;
-            }
-            h += `<div style="display:flex;height:${item.rowH}px">`;
-            item.fields.forEach((f,i)=> h+=`<div class="drop-zone" data-id="${item.id}" data-idx="${i}" style="width:${item.colW[i]}px;border:1px solid #94a3b8;padding:4px;font-size:12px;background:rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center">${f?`[${f}]`:''}</div>`);
-            h += `</div>`;
-            d.innerHTML = h;
-
-            d.onmousedown = e => { e.stopPropagation(); state.sel=item.id; render(); drag(e, item, 'move'); };
-            d.querySelectorAll('.drop-zone').forEach(z => {
-                z.ondragover=e=>e.preventDefault();
-                z.ondrop=e=>{
-                    e.preventDefault(); e.stopPropagation();
-                    const f=e.dataTransfer.getData('f');
-                    if(f) { item.fields[z.dataset.idx]=f; render(); saveState(); }
-                }
-            });
-            el('canvas').appendChild(d);
-        }
-
-        // --- Drag & Snap (Auto Guide) ---
-        function drag(e, item, mode) {
-            const sx=e.clientX, sy=e.clientY, ox=item.x, oy=item.y, ow=item.w, oh=item.h;
-            const gx=el('guideX'), gy=el('guideY');
-            
-            const mv = ev => {
-                const dx=ev.clientX-sx, dy=ev.clientY-sy;
-                if(mode==='move') {
-                    let nx=ox+dx, ny=oy+dy;
-                    let snapX=null, snapY=null;
-                    state.els.forEach(o => {
-                        if(o.id===item.id) return;
-                        if(Math.abs(nx-o.x)<5) { nx=o.x; snapY=o.x; }
-                        else if(Math.abs(nx-(o.x+o.w))<5) { nx=o.x+o.w; snapY=o.x+o.w; }
-                        if(Math.abs(ny-o.y)<5) { ny=o.y; snapX=o.y; }
-                        else if(Math.abs(ny-(o.y+o.h))<5) { ny=o.y+o.h; snapX=o.y+o.h; }
-                    });
-                    item.x=nx; item.y=ny;
-                    gx.style.display=snapX!==null?'block':'none'; if(snapX) gx.style.top=(snapX+state.cfg.offY)+'px';
-                    gy.style.display=snapY!==null?'block':'none'; if(snapY) gy.style.left=(snapY+state.cfg.offX)+'px';
-                } else {
-                    item.w=Math.max(2,ow+dx); item.h=Math.max(2,oh+dy);
-                }
-                render();
-            };
-            const up = () => {
-                document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up);
-                gx.style.display='none'; gy.style.display='none'; saveState();
-            };
-            document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
-        }
-
-        // --- Props ---
-        function renderProps(item) {
-            const p = el('props');
-            if(!item) {
-                p.innerHTML=`
-                <div class="form-group"><label class="form-label">紙張</label><select class="form-control" onchange="state.cfg.size=this.value;updCanvasSz();saveState()"><option value="a4">A4 (210x297)</option><option value="a5">A5</option></select></div>
-                <div class="form-group"><label class="form-label">方向</label><select class="form-control" onchange="state.cfg.orient=this.value;updCanvasSz();saveState()"><option value="landscape">橫向 (Landscape)</option><option value="portrait">直向 (Portrait)</option></select></div>
-                <div class="form-group"><label class="form-label">模式</label><select class="form-control" onchange="state.cfg.mode=this.value;render();saveState()"><option value="single">單頁 (Single)</option><option value="group">自動分頁清單 (Group)</option></select></div>
-                <div class="form-group"><label class="form-label">全域偏移 (印表機修正)</label><div style="display:flex;gap:5px"><input class="form-control" type="number" placeholder="X" value="${state.cfg.offX}" onchange="state.cfg.offX=+this.value;render();saveState()"><input class="form-control" type="number" placeholder="Y" value="${state.cfg.offY}" onchange="state.cfg.offY=+this.value;render();saveState()"></div></div>`;
-                return;
-            }
-            if(item.type!=='table') {
-                p.innerHTML=`
-                <div class="form-group"><label class="form-label">文字內容</label><textarea rows="3" class="form-control" oninput="upd('${item.id}','txt',this.value)">${item.txt}</textarea></div>
-                <div class="form-group"><label class="form-label">字體大小</label><input type="number" class="form-control" value="${item.fs}" oninput="upd('${item.id}','fs',+this.value)"></div>
-                <div style="display:flex;gap:5px" class="form-group">
-                    <div style="flex:1"><label class="form-label">文字色</label><input type="color" class="form-control" style="height:30px" value="${item.color}" oninput="upd('${item.id}','color',this.value)"></div>
-                    <div style="flex:1"><label class="form-label">背景色</label><input type="color" class="form-control" style="height:30px" value="${item.bg==='transparent'?'#ffffff':item.bg}" oninput="upd('${item.id}','bg',this.value)"></div>
-                </div>
-                <div class="form-group"><label class="form-label">邊框</label><select class="form-control" onchange="upd('${item.id}','br',this.value)"><option value="none">無</option><option value="1px solid #000000" ${item.br.includes('1px')?'selected':''}>細線</option><option value="2px solid #000000" ${item.br.includes('2px')?'selected':''}>粗線</option></select></div>
-                <div class="form-group"><label class="form-label">位置 (X, Y)</label><div style="display:flex;gap:5px"><input type="number" class="form-control" value="${item.x}" onchange="upd('${item.id}','x',+this.value)"><input type="number" class="form-control" value="${item.y}" onchange="upd('${item.id}','y',+this.value)"></div></div>
-                <div class="form-group"><label class="form-label">尺寸 (W, H)</label><div style="display:flex;gap:5px"><input type="number" class="form-control" value="${item.w}" onchange="upd('${item.id}','w',+this.value)"><input type="number" class="form-control" value="${item.h}" onchange="upd('${item.id}','h',+this.value)"></div></div>
-                `;
-            } else {
-                p.innerHTML=`<div class="form-label">表格表頭高 (0=隱藏)</div><input class="form-control" type="number" value="${item.headH}" onchange="upd('${item.id}','headH',+this.value)">
-                <div class="form-label" style="margin-top:10px">欄位名稱 (拖曳寬度調整)</div>`;
-                item.cols.forEach((c,i)=> p.innerHTML+=`<div style="margin-top:5px"><input class="form-control" value="${c}" oninput="updTbl('${item.id}',${i},this.value)"></div>`);
-            }
-        }
-        window.upd=(id,k,v)=>{ state.els.find(x=>x.id===id)[k]=v; render(); };
-        window.updTbl=(id,i,v)=>{ state.els.find(x=>x.id===id).cols[i]=v; render(); };
-
-        // --- Functions ---
-        function zOrder(d) {
-            const i=state.els.findIndex(x=>x.id===state.sel); if(i<0)return;
-            const el=state.els.splice(i,1)[0]; d===1?state.els.push(el):state.els.unshift(el); render(); saveState();
-        }
-        function dupEl() {
-            const o=state.els.find(x=>x.id===state.sel);
-            if(o) { const n=JSON.parse(JSON.stringify(o)); n.id=Math.random().toString(36); n.x+=10; n.y+=10; state.els.push(n); state.sel=n.id; render(); saveState(); }
-        }
-        function delEl() { state.els=state.els.filter(x=>x.id!==state.sel); state.sel=null; render(); saveState(); }
-        function swTab(b,t) { document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active')); b.classList.add('active'); el(t).classList.add('active'); }
-        
-        function addTable() {
-            const n=+el('tbl-cols').value;
-            const hh=+el('tbl-hh').value;
-            const item={ id:Math.random().toString(), type:'table', x:20, y:80, w:0, h:0, cols:Array(n).fill('').map((_,i)=>'H'+(i+1)), fields:Array(n).fill(''), colW:Array(n).fill(50), headH:hh, rowH:30 };
-            state.els.push(item); state.cfg.mode='group'; state.sel=item.id;
-            el('modal-tbl').style.display='none'; render(); saveState();
-        }
-
-        // ★★★ 魔法：公務報表產生器 ★★★
-        function genGovTable() {
-            if(!confirm('這將清空當前畫布並建立「收支概況彙總表」，確定嗎？')) return;
-            state.els = [];
-            state.cfg.orient = 'landscape';
-            state.cfg.mode = 'group';
-            state.cfg.splitY = 130; // 數據開始位置
-            updCanvasSz();
-
-            // 1. 建立標題
-            addEl('title', '〇〇基金近10年度收支概況彙總表', 350, 30, 400, 30, 20, 'bold');
-            addEl('text', '單位：新臺幣千元', 950, 60, 150, 20, 10, 'normal', 'transparent', 'none').align='right';
-
-            // 2. 畫複雜表頭 (使用矩形和文字組合，模擬合併儲存格)
-            // 第一列 (Top) Y=80, H=50 (部分高度不同)
-            // 欄位定義：X起始, 寬度
-            const cols = [
-                {t:'年度別', x:40, w:60},
-                {t:'業務總收入\n(含基金來源)', x:100, w:100},
-                {t:'業務總支出\n(含基金用途)', x:200, w:100},
-                {t:'年度賸餘\n(短絀)', x:300, w:80},
-                {t:'賸餘\n繳庫數', x:380, w:60},
-                {t:'購建固定資產', x:440, w:100},
-                // 合併欄位：國庫增撥
-                {t:'國 庫 增 撥', x:540, w:200, h:25, sub:[
-                    {t:'國庫增撥基金', x:540, w:100, y:105, h:25},
-                    {t:'政府補助收入', x:640, w:100, y:105, h:25}
-                ]},
-                // 合併欄位：資產
-                {t:'資  產', x:740, w:120, h:25, sub:[
-                     {t:'現  金', x:780, w:80, y:105, h:25} // 左邊留白
-                ]},
-                {t:'負  債', x:860, w:120, h:25, sub:[
-                     {t:'長債餘額', x:860, w:120, y:105, h:25}
-                ]},
-                 {t:'累積賸餘\n(基金餘額)', x:980, w:100}
-            ];
-
-            // 繪製表頭框線與文字
-            cols.forEach(c => {
-                if(c.sub) {
-                    // 合併的主標題
-                    addEl('text', c.t, c.x, 80, c.w, c.h, 12, 'bold', 'transparent', '1px solid #000000').align='center';
-                    // 子標題
-                    c.sub.forEach(s => {
-                         addEl('text', s.t, s.x, s.y, s.w, s.h, 12, 'bold', 'transparent', '1px solid #000000').align='center';
-                    });
-                    // 如果有留白(資產左邊)，補一個框線
-                    if(c.t === '資  產') {
-                        addEl('text', '', 740, 105, 40, 25, 12, 'normal', 'transparent', '1px solid #000000');
-                    }
-                } else {
-                    // 單一欄位 (高度 50)
-                    addEl('text', c.t, c.x, 80, c.w, 50, 12, 'bold', 'transparent', '1px solid #000000').align='center';
-                }
-            });
-
-            // 3. 建立數據表格 (隱藏表頭，只用來填數據)
-            const cw = [60, 100, 100, 80, 60, 100, 100, 100, 40, 80, 120, 100]; // 對應上面寬度
-            const tbl = {
-                id: Math.random().toString(), type: 'table', 
-                x: 40, y: 130, // 接在表頭下方
-                w: 0, h: 0,
-                cols: Array(12).fill(''), // 隱藏表頭
-                fields: Array(12).fill(''), 
-                colW: cw, 
-                headH: 0, // 重要：隱藏內建表頭
-                rowH: 30
-            };
-            state.els.push(tbl);
-            state.sel = tbl.id;
-
-            // 4. 產生範例數據
-            state.data = [];
-            for(let i=115; i>=106; i--) {
-                state.data.push({'C1':i, 'C2':'', 'C3':'', 'C4':''}); // 示意
-            }
-            state.fields = ['C1','C2','C3']; // 簡單示意
-
-            render(); saveState();
-            alert('報表結構已建立！請在下方表格拖曳欄位進行綁定。');
-        }
-
-        // --- PDF BG ---
-        async function loadPdfBg(i) {
-            const f=i.files[0]; if(!f)return;
-            const buf=await f.arrayBuffer();
-            const pdf=await pdfjsLib.getDocument(buf).promise;
-            const page=await pdf.getPage(1);
-            const vp=page.getViewport({scale:2.0});
-            const c=document.createElement('canvas'); c.width=vp.width; c.height=vp.height;
-            await page.render({canvasContext:c.getContext('2d'), viewport:vp}).promise;
-            state.bgUrl=c.toDataURL();
-            updBgOp(50); el('bg-ctrl').style.display='block';
-        }
-        function updBgOp(v) {
-            if(!state.bgUrl)return;
-            const a=v/100, ov=`linear-gradient(rgba(255,255,255,${a}),rgba(255,255,255,${a}))`;
-            el('canvas').style.backgroundImage=`${ov}, url(${state.bgUrl})`;
-            el('canvas').style.backgroundSize='100% 100%';
-        }
-        function clrBg() { state.bgUrl=null; el('canvas').style.backgroundImage='linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)'; el('canvas').style.backgroundSize='20px 20px'; el('bg-ctrl').style.display='none'; el('f-pdf').value=''; }
-
-        // --- Data ---
-        function loadData(i) {
-            const f=i.files[0], r=new FileReader();
-            r.onload=e=>{
-                const rows=e.target.result.trim().split('\n'), h=rows[0].split(',').map(s=>s.trim());
-                state.data=rows.slice(1).map(x=>{ const v=x.split(','); return h.reduce((a,k,j)=>({...a,[k]:v[j]?.trim()}),{}); });
-                state.fields=h; renderFields(); alert(`已載入 ${state.data.length} 筆`);
-            };
-            r.readAsText(f);
-        }
-        function renderFields() {
-            const d=el('field-list'); d.innerHTML='';
-            state.fields.forEach(f=>{
-                const b=document.createElement('div'); b.innerText=f; b.style.cssText='padding:4px 8px;border:1px solid #cbd5e1;cursor:grab;background:white;border-radius:4px;font-size:12px;color:#334155'; b.draggable=true;
-                b.ondragstart=e=>{e.dataTransfer.setData('type','field');e.dataTransfer.setData('f',f);};
-                d.appendChild(b);
-            });
-        }
-        el('canvas-wrap').ondragover=e=>e.preventDefault();
-        el('canvas-wrap').ondrop=e=>{
-            e.preventDefault(); const t=e.dataTransfer.getData('type');
-            if(t==='field') {
-                const f=e.dataTransfer.getData('f'), r=el('canvas').getBoundingClientRect();
-                addEl('field', f, e.clientX-r.left-state.cfg.offX, e.clientY-r.top-state.cfg.offY);
-            }
-        };
-
-        // --- Save/Load ---
-        function saveProject() {
-            const b=new Blob([JSON.stringify({v:'9.3', ...state})],{type:'application/json'});
-            const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`report-${Date.now()}.prs`; a.click();
-        }
-        function loadProject() { el('f-proj').click(); }
-        function readProject(i) {
-            const f=i.files[0], r=new FileReader();
-            r.onload=e=>{
-                try { const p=JSON.parse(e.target.result); state.els=p.els; state.cfg=p.cfg; state.data=p.data||[]; state.fields=p.fields||[]; render(); renderProps(); renderFields(); alert('已載入'); } catch(err){alert('格式錯誤');}
-            };
-            r.readAsText(f);
-        }
-
-        // --- Demo ---
-        function loadDemo(t) {
-            if(!confirm('覆蓋？')) return; state.els=[];
-            if(t==='invoice') {
-                state.cfg.mode='group'; state.cfg.splitY=160;
-                addEl('text','',20,110,700,2,12,'normal','transparent','2px solid #000000');
-                addEl('title','電子發票',250,40,300,30,24,'bold');
-                addEl('text','日期: 2025-01-01',500,80,200,20);
-                const tb={id:'t1',type:'table',x:40,y:170,cols:['品名','數量','單價','金額'],fields:['品名','數量','單價','金額'],colW:[250,80,100,100],headH:30,rowH:30};
-                state.els.push(tb); state.data=[{品名:'A',數量:'1',單價:'10',金額:'10'},{品名:'B',數量:'2',單價:'20',金額:'40'}];
-            } else if(t==='label') {
-                state.cfg.mode='single'; state.cfg.size='a4';
-                addEl('text','',10,10,300,180,12,'normal','transparent','2px solid #000000');
-                addEl('field','品名',50,50,200,30,20,'bold');
-                state.data=[{品名:'商品A'}];
-            }
-            state.fields=Object.keys(state.data[0]); renderFields(); render(); saveState();
-        }
-
-        // --- Print ---
-        function printDoc() {
-            const c=el('print-container'); c.innerHTML='';
-            const css=document.createElement('style');
-            css.innerHTML=`@media print{@page{margin:0} body{visibility:hidden} #print-container{visibility:visible;position:absolute;left:0;top:0} .p-pg{page-break-after:always;position:relative;height:${state.cfg.h}mm;width:${state.cfg.w}mm;overflow:hidden} .p-el{position:absolute;display:flex;align-items:center;overflow:hidden}}`;
-            c.appendChild(css);
-            const dt = state.data.length ? state.data : [{}];
-            
-            if(state.cfg.mode === 'single') {
-                dt.forEach(d => {
-                    const pg = document.createElement('div'); pg.className = 'p-pg';
-                    state.els.forEach(e => pg.appendChild(mkEl(e, d)));
-                    c.appendChild(pg);
-                });
-            } else { // Group
-                const pg = document.createElement('div'); pg.className = 'p-pg';
-                state.els.filter(e=>e.y<state.cfg.splitY).forEach(e=>pg.appendChild(mkEl(e, dt[0])));
-                let cy = state.cfg.splitY;
-                const tbl = state.els.find(e=>e.type==='table');
-                
-                if(tbl) {
-                    if(tbl.headH > 0) {
-                        const th = mkTbl(tbl, null, true);
-                        th.style.top=cy+'px'; th.style.left=(tbl.x+state.cfg.offX)+'px';
-                        pg.appendChild(th); cy+=tbl.headH;
-                    }
-                    dt.forEach(d => {
-                        const tr = mkTbl(tbl, d, false);
-                        tr.style.top=cy+'px'; tr.style.left=(tbl.x+state.cfg.offX)+'px';
-                        pg.appendChild(tr); cy+=tbl.rowH;
-                        
-                        if(cy > (state.cfg.h*3.78)-50) {
-                            c.appendChild(pg);
-                            const nPg = document.createElement('div'); nPg.className='p-pg';
-                            state.els.filter(e=>e.y<state.cfg.splitY).forEach(e=>nPg.appendChild(mkEl(e, dt[0])));
-                            cy = state.cfg.splitY;
-                            if(tbl.headH > 0) {
-                                const nth = mkTbl(tbl, null, true);
-                                nth.style.top=cy+'px'; nth.style.left=(tbl.x+state.cfg.offX)+'px';
-                                nPg.appendChild(nth); cy+=tbl.headH;
-                            }
-                            pg=nPg; 
-                        }
-                    });
-                }
-                c.appendChild(pg);
-            }
-            setTimeout(() => window.print(), 500);
-        }
-
-        function mkEl(item, data) {
-            const d=document.createElement('div'); d.className='p-el';
-            d.style.left=(item.x+state.cfg.offX)+'px'; d.style.top=(item.y+state.cfg.offY)+'px';
-            d.style.width=item.w+'px'; d.style.height=item.h+'px';
-            d.style.fontSize=item.fs+'px'; d.style.fontWeight=item.fw;
-            d.style.background=item.bg; d.style.border=item.br; d.style.color=item.color;
-            d.style.justifyContent = item.align==='center'?'center':(item.align==='right'?'flex-end':'flex-start');
-            if(item.type!=='table') d.innerText = item.type==='field' ? (data[item.txt]||'') : item.txt;
-            return d;
-        }
-        function mkTbl(item, data, isH) {
-            const r=document.createElement('div'); r.className='p-el';
-            r.style.width=item.colW.reduce((a,b)=>a+b,0)+'px';
-            r.style.height=(isH?item.headH:item.rowH)+'px';
-            item.cols.forEach((c,i)=>{
-                const cell=document.createElement('div');
-                cell.style.width=item.colW[i]+'px'; cell.style.height='100%';
-                cell.style.border='1px solid #000'; cell.style.fontSize='12px'; cell.style.padding='2px';
-                cell.style.display='flex'; cell.style.alignItems='center'; cell.style.justifyContent='center';
-                cell.innerText=isH?c:(data[item.fields[i]]||'');
-                r.appendChild(cell);
-            });
-            return r;
-        }
-    </script>
+    <!-- Application Script -->
+    <script src="js/app.js"></script>
 </body>
+
 </html>
