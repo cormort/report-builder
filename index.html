@@ -416,7 +416,12 @@
     // --- 4. Element Management ---
     function addEl(type, content, x=20, y=20, w=120, h=30, fs=12, fw='normal', bg='transparent', br='none') {
         const id = 'el-' + Math.random().toString(36).substr(2, 9);
-        const elData = { id, type, content, x, y, width:w, height:h, fontSize:fs, fontWeight:fw, backgroundColor:bg, border:br };
+        const elData = { 
+            id, type, content, x, y, width:w, height:h, 
+            fontSize:fs, fontWeight:fw, backgroundColor:bg, border:br,
+            color: '#000000', // Default Text Color
+            textAlign: 'left'
+        };
         if(type === 'field') elData.fieldName = content;
         state.elements.push(elData);
         state.selectedId = id;
@@ -434,9 +439,10 @@
         el('splitLine').style.display = state.config.mode === 'group' ? 'block' : 'none';
         el('splitLine').style.top = state.config.splitY + 'px';
 
-        state.elements.forEach(item => {
-            if(item.type === 'table') renderTable(item);
-            else renderSimpleEl(item);
+        // ★★★ 關鍵修正：依照 Array 順序渲染，確保圖層正確 ★★★
+        state.elements.forEach((item, index) => {
+            if(item.type === 'table') renderTable(item, index);
+            else renderSimpleEl(item, index);
         });
         
         const sel = state.elements.find(e => e.id === state.selectedId);
@@ -446,7 +452,7 @@
         }
     }
 
-    function renderSimpleEl(item) {
+    function renderSimpleEl(item, index) {
         const div = document.createElement('div');
         div.className = 'canvas-element';
         if(state.selectedId === item.id) div.classList.add('selected');
@@ -458,8 +464,11 @@
         div.style.fontSize = item.fontSize + 'px';
         div.style.fontWeight = item.fontWeight;
         div.style.background = item.backgroundColor;
+        div.style.color = item.color || '#000000'; // Apply Text Color
         div.style.border = item.border === 'none' && state.selectedId === item.id ? '1px dashed #ccc' : item.border;
-        div.style.zIndex = state.selectedId === item.id ? 100 : 1;
+        
+        // ★★★ 關鍵修正：Z-Index 固定為 index，選取時不改變層級 ★★★
+        div.style.zIndex = index + 1; 
 
         const val = item.type === 'field' ? `[${item.content}]` : item.content;
         div.innerHTML = `<div class="canvas-element-value" style="text-align:${item.textAlign||'left'}">${val}</div>`;
@@ -570,7 +579,7 @@
         renderAll(); saveState();
     }
 
-    function renderTable(t) {
+    function renderTable(t, index) {
         const totalW = t.columnWidths.reduce((a,b)=>a+b,0);
         const totalH = t.headerHeight + t.rowHeight;
         
@@ -582,16 +591,17 @@
         div.style.top = (t.y + state.config.offY) + 'px';
         div.style.width = totalW + 'px';
         div.style.height = totalH + 'px';
+        div.style.zIndex = index + 1; // Z-Index Fix
 
         let html = `<div style="width:100%;height:100%">`;
         html += `<div style="display:flex;height:${t.headerHeight}px;">`;
         t.columns.forEach((c, i) => {
-            html += `<div style="width:${t.columnWidths[i]}px; background:${t.headerBg}; border:${t.headerBorder}; padding:4px; font-weight:bold; font-size:${t.fontSize}px; overflow:hidden; position:relative;">${c}<div class="col-resizer" onmousedown="resizeCol(event, '${t.id}', ${i})" style="position:absolute;right:0;top:0;width:5px;height:100%;cursor:col-resize;opacity:0"></div></div>`;
+            html += `<div style="width:${t.columnWidths[i]}px; background:${t.headerBg}; border:${t.headerBorder}; padding:4px; font-weight:bold; font-size:${t.fontSize}px; overflow:hidden; position:relative; color:#000;">${c}<div class="col-resizer" onmousedown="resizeCol(event, '${t.id}', ${i})" style="position:absolute;right:0;top:0;width:5px;height:100%;cursor:col-resize;opacity:0"></div></div>`;
         });
         html += `</div>`;
         html += `<div style="display:flex;height:${t.rowHeight}px;">`;
         t.fields.forEach((f, i) => {
-             html += `<div class="drop-zone" data-tid="${t.id}" data-idx="${i}" style="width:${t.columnWidths[i]}px; border:${t.cellBorder}; padding:4px; font-size:${t.fontSize}px; color:#666; overflow:hidden;">[${f||'拖曳欄位'}]</div>`;
+             html += `<div class="drop-zone" data-tid="${t.id}" data-idx="${i}" style="width:${t.columnWidths[i]}px; border:${t.cellBorder}; padding:4px; font-size:${t.fontSize}px; color:#666; overflow:hidden; background:rgba(255,255,255,0.8);">[${f||'拖曳欄位'}]</div>`;
         });
         html += `</div></div>`;
         
@@ -603,7 +613,7 @@
         
         div.querySelectorAll('.drop-zone').forEach(zone => {
             zone.ondragover = e => { e.preventDefault(); zone.style.background = '#e0e7ff'; };
-            zone.ondragleave = e => { zone.style.background = 'transparent'; };
+            zone.ondragleave = e => { zone.style.background = 'rgba(255,255,255,0.8)'; };
             zone.ondrop = e => {
                 e.preventDefault(); e.stopPropagation();
                 const field = e.dataTransfer.getData('field');
@@ -680,9 +690,17 @@
             <div class="form-group"><label class="form-label">字體大小</label>
                 <input type="number" class="form-control" value="${item.fontSize}" oninput="updateProp('${item.id}','fontSize',+this.value)">
             </div>
+            <div class="form-group"><label class="form-label">文字顏色</label>
+                <input type="color" class="form-control" style="height:40px" value="${item.color||'#000000'}" oninput="updateProp('${item.id}','color',this.value)">
+            </div>
+            <div class="form-group"><label class="form-label">背景顏色</label>
+                <input type="color" class="form-control" style="height:40px" value="${item.backgroundColor==='transparent'?'#ffffff':item.backgroundColor}" oninput="updateProp('${item.id}','backgroundColor',this.value)">
+            </div>
             <div class="form-group"><label class="form-label">對齊</label>
                 <select class="form-control" onchange="updateProp('${item.id}','textAlign',this.value)">
-                    <option value="left">靠左</option><option value="center">置中</option><option value="right">靠右</option>
+                    <option value="left" ${item.textAlign==='left'?'selected':''}>靠左</option>
+                    <option value="center" ${item.textAlign==='center'?'selected':''}>置中</option>
+                    <option value="right" ${item.textAlign==='right'?'selected':''}>靠右</option>
                 </select>
             </div>
             <div style="display:flex;gap:5px">
@@ -833,13 +851,12 @@
         r.readAsText(f);
     };
 
-    // --- 9. Load Demo (Fixed & Complete) ---
+    // --- 9. Load Demo ---
     window.loadDemo = (type) => {
         if(!confirm('這將覆蓋當前畫布，確定要載入範例嗎？')) return;
         state.elements = [];
         
         if(type === 'invoice') {
-            // 發票 (Group Mode)
             state.config = { size: 'a4', orient: 'portrait', w: 210, h: 297, mode: 'group', splitY: 160, offX:0, offY:0, gC:2, gR:4 };
             addEl('title', '電子計算機統一發票', 200, 40, 300, 30, 24, 'bold', 'transparent');
             addEl('text', '發票號碼：AA-12345678', 40, 90, 200, 20);
@@ -847,7 +864,6 @@
             addEl('text', '買受人：', 40, 120, 60, 20, 12, 'bold');
             addEl('field', '客戶名稱', 100, 120, 200, 20, 12, 'normal', '#eee');
             
-            // Insert Table for Invoice
             const t = {
                 id: 'tbl-invoice', type:'table', x: 40, y: 170,
                 columns: ['品名','規格','數量','單價','金額'], 
@@ -857,14 +873,12 @@
             };
             state.elements.push(t);
             
-            // Demo Data
             state.data = [
                 {客戶名稱:'範例科技', 品名:'原子筆', 規格:'藍色', 數量:'10', 單價:'15', 金額:'150'},
                 {客戶名稱:'範例科技', 品名:'A4影印紙', 規格:'80磅', 數量:'2', 單價:'450', 金額:'900'}
             ];
         } 
         else if (type === 'label') {
-            // 標籤 (Grid Mode)
             state.config = { size: 'a4', orient: 'portrait', w: 210, h: 297, mode: 'grid', splitY: 150, offX:0, offY:0, gC:2, gR:4, gX:10, gY:10 };
             addEl('text', '', 0, 0, 300, 200, 12, 'normal', 'transparent', '2px solid #ccc');
             addEl('title', '產品標籤', 20, 20, 150, 30, 18, 'bold');
@@ -872,7 +886,7 @@
             addEl('field', '品名', 70, 60, 200, 25, 14, 'bold', '#eee');
             addEl('text', '價格: $', 20, 100, 60, 25, 12, 'bold');
             addEl('field', '價格', 80, 100, 100, 25, 16, 'bold', 'transparent');
-            addEl('qrcode', '條碼', 20, 140, 50, 50); // Using QR type as placeholder
+            addEl('qrcode', '條碼', 20, 140, 50, 50);
             
             state.data = [
                 {品名:'無線滑鼠', 價格:'599', 條碼:'123456'}, {品名:'機械鍵盤', 價格:'2400', 條碼:'123457'},
@@ -880,7 +894,6 @@
             ];
         } 
         else if (type === 'shipping') {
-            // 出貨單 (Group Mode)
             state.config = { size: 'a4', orient: 'portrait', w: 210, h: 297, mode: 'group', splitY: 140, offX:0, offY:0, gC:2, gR:4 };
             addEl('title', '出貨單', 20, 20, 200, 40, 24, 'bold');
             addEl('text', '客戶:', 20, 80, 50, 20);
@@ -904,14 +917,11 @@
             ];
         }
 
-        // Common Updates
         state.fields = Object.keys(state.data[0]||{});
         renderFieldList();
         renderAll();
         renderPageProps();
         saveState();
-        
-        // Auto switch to Data tab to show fields
         document.querySelector('[data-tab="tab1"]').click();
     };
 
@@ -925,22 +935,18 @@
         c.appendChild(style);
 
         if(state.config.mode === 'group') {
-            // Group Mode Logic
             const groupField = state.fields.find(f => f.includes('客戶') || f.includes('單號')) || state.fields[0];
             const grouped = {};
             printData.forEach(r => { const k = r[groupField]||'ALL'; if(!grouped[k]) grouped[k]=[]; grouped[k].push(r); });
             
             Object.values(grouped).forEach(rows => {
                 let page = createPage(); c.appendChild(page);
-                // Header (Above Split)
                 state.elements.filter(e => e.y < state.config.splitY).forEach(e => page.appendChild(createPrintEl(e, rows[0])));
                 
-                // Body (Below Split)
                 let cy = state.config.splitY;
                 const tbl = state.elements.find(e => e.type === 'table');
                 
                 if(tbl) {
-                    // Print Table Header
                     const thead = createPrintRow(tbl, null, true);
                     thead.style.top = cy + 'px'; thead.style.left = (tbl.x + state.config.offX) + 'px';
                     page.appendChild(thead);
@@ -952,7 +958,7 @@
                         page.appendChild(rowEl);
                         cy += tbl.rowHeight;
                         
-                        if(cy > (state.config.h*3.78) - 50) { // Page Break
+                        if(cy > (state.config.h*3.78) - 50) { 
                              page = createPage(); c.appendChild(page);
                              state.elements.filter(e => e.y < state.config.splitY).forEach(e => page.appendChild(createPrintEl(e, rows[0])));
                              cy = state.config.splitY;
@@ -965,7 +971,6 @@
                 }
             });
         } else if (state.config.mode === 'grid') {
-            // Grid Mode Logic
             const { gC, gR, gX, gY } = state.config;
             let page = createPage(); let idx = 0;
             const itemW = state.elements.reduce((m,e)=>Math.max(m,e.x+e.width),0);
@@ -974,7 +979,7 @@
             printData.forEach(r => {
                 if(idx >= gC * gR) { page = createPage(); c.appendChild(page); idx = 0; }
                 const col = idx % gC; const row = Math.floor(idx / gC);
-                const offX = col * (itemW + gX) + 20; // 20 padding
+                const offX = col * (itemW + gX) + 20;
                 const offY = row * (itemH + gY) + 20;
                 
                 state.elements.forEach(e => {
@@ -987,7 +992,6 @@
             });
             c.appendChild(page);
         } else {
-            // Single Mode
             printData.forEach(r => {
                 const p = createPage();
                 state.elements.forEach(e => p.appendChild(createPrintEl(e, r)));
@@ -1005,12 +1009,13 @@
     }
 
     function createPrintEl(item, row) {
-        if(item.type === 'table') return document.createElement('div'); // Handled separately
+        if(item.type === 'table') return document.createElement('div');
         const d = document.createElement('div'); d.className = 'print-element';
         d.style.left = (item.x + state.config.offX) + 'px'; d.style.top = (item.y + state.config.offY) + 'px';
         d.style.width = item.width + 'px'; d.style.height = item.height + 'px';
         d.style.fontSize = item.fontSize + 'px'; d.style.fontWeight = item.fontWeight;
         d.style.border = item.border; d.style.textAlign = item.textAlign || 'left';
+        d.style.color = item.color || '#000000'; // Print Text Color
         
         if(item.type === 'qrcode') {
              d.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${row[item.content]||'TEST'}" style="width:100%;height:100%">`;
@@ -1033,6 +1038,7 @@
             d.style.fontSize = t.fontSize + 'px';
             d.style.padding = '4px'; d.style.boxSizing = 'border-box';
             d.style.textAlign = t.columnAligns[i] || 'left';
+            d.style.color = '#000000'; // Print Table Text Color
             d.style.height = (isHeader ? t.headerHeight : t.rowHeight) + 'px';
             d.innerText = isHeader ? c : (row[t.fields[i]] || '');
             r.appendChild(d);
